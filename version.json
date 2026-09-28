@@ -1,5 +1,5 @@
 {
-  "version": "3.6",
+  "version": "3.7",
   "date": "2026-09-28",
-  "notes": "Pesos antigos do app Saúde aparecem com mês e ano."
+  "notes": "Aba Chat: converse com o GPT; quando perguntar algo seu, ele consulta o app."
 }

@@ -373,6 +373,33 @@ details summary{cursor:pointer;color:var(--accent);font-weight:650}
 .tip-box{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:var(--radius);background:var(--accent-soft);color:var(--ink)}
 .tip-box>svg{color:var(--accent);flex:none;margin-top:2px}
 .lock .btn.primary{min-height:52px}
+
+/* v3.7: chat */
+.tabbar .in{grid-template-columns:repeat(6,1fr)}
+.tabbar button{font-size:10px}
+.chat{display:flex;flex-direction:column;gap:10px}
+.msg{display:flex;flex-direction:column;max-width:88%;min-width:0}
+.msg.user{align-self:flex-end;align-items:flex-end}
+.msg.assistant{align-self:flex-start}
+.bubble{padding:10px 14px;border-radius:18px;font-size:16px;line-height:1.45;overflow-wrap:anywhere}
+.msg.user .bubble{background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:6px}
+.msg.assistant .bubble{background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:6px}
+.bubble p{margin:0 0 6px}.bubble p:last-child{margin:0}
+.bubble ul{margin:2px 0 6px;padding-left:20px}.bubble li{margin:2px 0}
+.used{font-size:12px;color:var(--muted);margin:4px 8px 0;display:inline-flex;gap:4px;align-items:center}
+.typing{display:flex;gap:5px;padding:15px 16px}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.typing i{animation:none;opacity:.6}}
+.msg.assistant .bubble.err-b{background:var(--bad-soft);border-color:transparent}
+.chat-input{position:fixed;left:0;right:0;bottom:calc(var(--tabbar) + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto;display:flex;gap:8px;align-items:flex-end;background:var(--bg);padding:10px 16px 10px;z-index:15;border-top:1px solid var(--line)}
+.chat{padding-bottom:84px}
+.chat-input textarea{flex:1;resize:none;min-height:46px;max-height:140px;font-size:16px;border-radius:22px;padding:11px 16px;line-height:1.35}
+.chat-input .btn{width:46px;min-width:46px;height:46px;min-height:46px;border-radius:50%;padding:0;display:grid;place-items:center}
+.chat-empty{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:4px 0}
+.chip-q{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:9px 14px;font-size:15px;cursor:pointer;text-align:left}
+.page-head .row{gap:8px}
 </style>
 </head>
 <body>
@@ -382,6 +409,7 @@ details summary{cursor:pointer;color:var(--accent);font-weight:650}
   <button data-act="tab" data-tab="peso"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7.5 10a6.4 6.4 0 0 1 9 0"/><path d="M12 11l1.8-2.6"/></svg>Peso</button>
   <button data-act="tab" data-tab="resultados"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 20.5h17"/><path d="M5 16l4.5-5 3.5 3 6-7"/><circle cx="19" cy="7" r="1.6"/></svg>Resultados</button>
   <button data-act="tab" data-tab="saude"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12.5h4l2.2-5.5 4.3 11 2.3-5.5h6.2"/></svg>Saúde</button>
+  <button data-act="tab" data-tab="chat"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 5h15v10.5h-9.5L5.5 19.5v-4h-1z"/></svg>Chat</button>
   <button data-act="tab" data-tab="ajustes"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Ajustes</button>
 </div></nav>
 <div id="sheet-root" hidden></div>
@@ -393,7 +421,7 @@ details summary{cursor:pointer;color:var(--accent);font-weight:650}
 <script>
 'use strict';
 const APP_ID = 'prontuario-de-bolso';
-const APP_VERSION = '3.6';
+const APP_VERSION = '3.7';
 const PREVIEW = !!window.PREVIEW_MODE;
 
 /* ---------- utils ---------- */
@@ -471,6 +499,9 @@ const P = {
   book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>',
   refresh: '<path d="M20 11a8 8 0 0 0-14.5-4.6L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.5 4.6L20 16"/><path d="M20 20.5V16h-4.5"/>',
   note: '<path d="M5 3.5h10l4 4v13H5z"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/>',
+  chat: '<path d="M4.5 5h15v10.5h-9.5L5.5 19.5v-4h-1z"/>',
+  send: '<path d="M4 12L20 4l-6 16-2.6-6.4z"/><path d="M11.4 13.6L20 4"/>',
+  search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3"/>',
   sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
   flask: '<path d="M9 3h6"/><path d="M10 3v6.2L4.8 18.3A1.8 1.8 0 0 0 6.4 21h11.2a1.8 1.8 0 0 0 1.6-2.7L14 9.2V3"/><path d="M7.2 15h9.6"/>',
   target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8"/>'
@@ -1482,6 +1513,8 @@ function viewAjustes() {
   return `<header class="page-head"><h1>Ajustes</h1></header>
   ${updBanner()}
   ${vaultCard()}
+  <h2 class="sec">Chat (OpenAI)</h2>
+  <button class="btn block" data-act="${AI.cfg ? 'ai-settings' : 'tab'}" data-tab="chat">${ico('chat', 18)} ${AI.cfg ? `Chat ligado · ${esc(AI.cfg.model)} · ajustar` : 'Ligar o chat (colar a chave da OpenAI)'}</button>
   <h2 class="sec">Locais salvos</h2>
   <p class="muted small" style="margin:-8px 0 0">Registrou o peso perto de um desses lugares, o app põe o nome sozinho. Fora deles, ele usa o endereço do GPS.</p>
   ${S.places.length ? `<ul class="list">${S.places.map(p => `<li><button class="row-btn" data-act="place-open" data-id="${p.id}"><span class="chip k-${p.kind}" style="padding:7px">${ico(p.kind, 18)}</span><div class="rb-main"><b>${esc(p.name)}</b><span class="muted small">raio ${p.radius} m · ${plural(counts(p.id), 'registro', 'registros')}</span></div>${ico('next', 16)}</button></li>`).join('')}</ul>` : `<div class="empty"><b>Nenhum local salvo</b>Vá até sua casa (ou hospital, academia…) e toque no botão abaixo.</div>`}
@@ -2046,10 +2079,148 @@ async function applyUpdate() {
 }
 const updBanner = () => Upd.info ? `<button class="banner" style="border:0;text-align:left;width:100%;background:var(--gold-soft)" data-act="app-update"><p><b>Nova versão ${esc(Upd.info.version)} do app.</b> ${Upd.info.notes ? esc(Upd.info.notes) + ' ' : ''}Toque pra atualizar (seus dados não mudam).</p></button>` : '';
 
+/* ---------- chat (OpenAI) ----------
+   Chat comum. Só quando a pergunta é sobre os dados dele, o modelo chama uma "ferramenta" e o app manda SÓ aquele pedaço.
+   A chave fica só neste aparelho (IndexedDB 'kv/ai'); não vai pro cofre, nem pro backup, nem pro GitHub. */
+const AI = { cfg: null, history: [], busy: false, err: '' };
+const AI_MODELS = [['gpt-6-luna', 'GPT-6 Luna (econômico)'], ['gpt-6-sol', 'GPT-6 Sol (mais esperto)'], ['gpt-6-astra', 'GPT-6 Astra (caro)']];
+async function aiInit() { try { const c = await Store.get('kv', 'ai'); if (c) { AI.cfg = c.key ? { key: c.key, model: c.model || 'gpt-6-luna' } : null; AI.history = c.history || []; } } catch (_) {} }
+async function aiPersist() { try { await Store.put('kv', 'ai', { key: AI.cfg ? AI.cfg.key : '', model: AI.cfg ? AI.cfg.model : 'gpt-6-luna', history: AI.history.slice(-60) }); } catch (_) {} }
+const aiNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const inRangeDK = (d, desde, ate) => (!desde || d >= desde) && (!ate || d <= ate);
+const AI_IMPL = {
+  buscar_exames({ termo = '', desde = '', ate = '' } = {}) {
+    const t = aiNorm(termo).trim(), exs = S.exams.filter(e => inRangeDK(e.date, desde, ate)).sort((a, b) => a.date.localeCompare(b.date));
+    if (!t) return { exames: exs.map(e => ({ data: e.date, exame: e.title, laboratorio: e.lab || '', qtd_resultados: (e.markers || []).length, observacao: e.notes || '' })) };
+    const rows = [];
+    for (const e of exs) for (const m of e.markers || []) if (aiNorm(m.name).includes(t) || aiNorm(e.title).includes(t)) rows.push({ data: e.date, exame: e.title, marcador: m.name, valor: m.raw, unidade: m.unit || '', referencia: refText(m).replace(/^ref\. /, ''), situacao: mkStatus(m) || '' });
+    return rows.length ? { resultados: rows.slice(0, 120) } : { resultados: [], aviso: 'Nada com esse termo. Tente outro nome (ex.: "vitamina", "colesterol") ou sem termo pra listar os exames.' };
+  },
+  buscar_pesos({ desde = '', ate = '' } = {}) {
+    const ws = [...S.weights].sort((a, b) => a.ts.localeCompare(b.ts)).filter(w => inRangeDK(dayKey(new Date(w.ts)), desde, ate));
+    const rows = ws.map(w => ({ data: w.monthOnly ? dayKey(new Date(w.ts)).slice(0, 7) + (w.monthAvg ? ' (só o mês, média)' : ' (só o mês)') : dayKey(new Date(w.ts)), kg: w.kg, local: w.label || w.address || '' }));
+    const kgs = ws.map(w => w.kg);
+    return { pesos: rows, resumo: ws.length ? { registros: ws.length, primeiro: rows[0], ultimo: rows[rows.length - 1], minimo: Math.min(...kgs), maximo: Math.max(...kgs) } : null, meta_de_peso: S.settings.weightGoal };
+  },
+  buscar_habitos({ dias = 30 } = {}) {
+    const n = Math.max(1, Math.min(365, +dias || 30)), today = dayKey(), ks = Array.from({ length: n }, (_, i) => addDays(today, -i));
+    const en = ks.map(k => (S.journal[k] || {}).energy).filter(v => v != null);
+    return { periodo_dias: n, habitos: activeTasks().map(t => ({ habito: t.name, horario: PERIODS[t.period || 'dia'], feitos: ks.filter(k => isDone(k, t.id)).length, de: n, sequencia_atual: habitStreak(t.id, today) })),
+      dias_completos: ks.filter(dayComplete).length, energia_media: en.length ? Math.round(en.reduce((a, b) => a + b, 0) / en.length * 10) / 10 : null, dias_com_energia: en.length, usa_o_app_desde: S.meta.start };
+  },
+  buscar_consultas() { return { consultas: S.consults.map(c => ({ data: c.date, especialidade: c.specialty, medico: c.doctor, local: c.place, motivo: c.reason, retorno: c.returnDate, notas: c.notes })) }; },
+  buscar_ficha() { const p = S.profile; return { tipo_sanguineo: p.blood, visao: p.vision, alergias: p.allergies, remedios: p.meds, condicoes: p.conditions }; }
+};
+const aiFn = (name, description, properties = {}) => ({ type: 'function', name, description, strict: false, parameters: { type: 'object', properties } });
+const AI_TOOLS = [
+  aiFn('buscar_exames', 'Exames do usuário (sangue, urina, vista…). Use quando ele perguntar de um exame ou marcador DELE (ex.: B12, vitamina D, colesterol, glicose, creatinina, hemograma). Sem "termo", lista os exames com datas.',
+    { termo: { type: 'string', description: 'Parte do nome do marcador ou exame, ex.: "b12", "vitamina d", "colesterol".' }, desde: { type: 'string', description: 'AAAA-MM-DD (opcional)' }, ate: { type: 'string', description: 'AAAA-MM-DD (opcional)' } }),
+  aiFn('buscar_pesos', 'Pesos registrados pelo usuário (kg, data, local) e a meta de peso. Use quando ele perguntar do peso dele.', { desde: { type: 'string', description: 'AAAA-MM-DD (opcional)' }, ate: { type: 'string', description: 'AAAA-MM-DD (opcional)' } }),
+  aiFn('buscar_habitos', 'Hábitos diários do usuário: quantos dias fez cada um, sequência atual, dias completos e energia média.', { dias: { type: 'number', description: 'Quantos dias pra trás (padrão 30).' } }),
+  aiFn('buscar_consultas', 'Consultas médicas registradas pelo usuário (data, especialidade, retorno, notas).'),
+  aiFn('buscar_ficha', 'Ficha de saúde do usuário: tipo sanguíneo, visão, alergias, remédios, condições.')
+];
+const AI_LABEL = { buscar_exames: a => 'exames' + (a.termo ? ` (${a.termo})` : ''), buscar_pesos: () => 'pesos', buscar_habitos: () => 'hábitos', buscar_consultas: () => 'consultas', buscar_ficha: () => 'ficha' };
+function aiInstructions() {
+  const nm = S.settings && S.settings.name;
+  return `Você é o assistente do app de saúde pessoal "Prontuário de Bolso"${nm ? `, conversando com ${nm}` : ''}. Hoje é ${fmtDayLong(dayKey())} (${dayKey()}).
+Responda em português do Brasil, curto, direto, em tom de amigo. Converse normalmente sobre qualquer assunto.
+Só quando a pergunta for sobre os dados DELE (exames, peso, hábitos, energia, consultas, ficha), use as ferramentas e busque apenas o que precisa. Nunca invente valores: se não achar, diga que não está no app.
+Ao falar de um resultado, diga data, valor e se está dentro da referência; compare com a medição anterior quando houver.
+Você não é médico: sobre remédio, dose ou tratamento, diga em uma frase pra levar ao médico, sem sermão.`;
+}
+function mdLite(t) {
+  let html = '', list = false;
+  for (const l of esc(t).split('\n')) {
+    const m = l.match(/^\s*(?:[-•*]|\d+[.)])\s+(.*)$/);
+    if (m) { if (!list) { html += '<ul>'; list = true; } html += `<li>${m[1]}</li>`; }
+    else { if (list) { html += '</ul>'; list = false; } if (l.trim()) html += `<p>${l}</p>`; }
+  }
+  if (list) html += '</ul>';
+  return html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+}
+async function aiSend(text) {
+  text = String(text || '').trim(); if (!text || AI.busy) return;
+  if (!AI.cfg || !AI.cfg.key) return toast('Cole sua chave da OpenAI primeiro.');
+  AI.history.push({ role: 'user', text, ts: new Date().toISOString() }); UI.aiDraft = ''; AI.busy = true; AI.err = ''; render();
+  const input = AI.history.slice(-16).map(m => ({ role: m.role, content: m.text })), used = [];
+  try {
+    let answer = '';
+    for (let i = 0; i < 6; i++) {
+      const r = await fetch('https://api.openai.com/v1/responses', { method: 'POST', headers: { 'Authorization': 'Bearer ' + AI.cfg.key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: AI.cfg.model || 'gpt-6-luna', instructions: aiInstructions(), input, tools: AI_TOOLS, store: false }) });
+      if (!r.ok) { let msg = ''; try { msg = ((await r.json()).error || {}).message || ''; } catch (_) {} throw Object.assign(new Error(msg), { status: r.status }); }
+      const j = await r.json(), out = j.output || [], calls = out.filter(o => o.type === 'function_call');
+      if (!calls.length) { answer = out.filter(o => o.type === 'message').flatMap(o => o.content || []).filter(c => c.type === 'output_text').map(c => c.text).join('\n').trim() || j.output_text || ''; break; }
+      for (const c of calls) {
+        let args = {}; try { args = JSON.parse(c.arguments || '{}'); } catch (_) {}
+        const f = AI_IMPL[c.name]; let res; try { res = f ? f(args) : { erro: 'ferramenta desconhecida' }; } catch (e) { res = { erro: String(e && e.message || e) }; }
+        if (AI_LABEL[c.name]) used.push(AI_LABEL[c.name](args));
+        input.push({ type: 'function_call', call_id: c.call_id, name: c.name, arguments: c.arguments || '{}' }, { type: 'function_call_output', call_id: c.call_id, output: JSON.stringify(res) });
+      }
+    }
+    AI.history.push({ role: 'assistant', text: answer || 'Não consegui montar a resposta agora. Tenta de novo?', used: [...new Set(used)], ts: new Date().toISOString() });
+  } catch (e) {
+    AI.err = e.status === 401 ? 'A OpenAI não aceitou a chave. Troque no botão de ajustes do chat.'
+      : e.status === 429 ? 'Sem crédito ou limite atingido na OpenAI. Confira o Billing em platform.openai.com.'
+      : e.status === 404 || (e.status === 400 && /model/i.test(e.message || '')) ? `Esse modelo não está disponível na sua conta (${AI.cfg.model}). Troque no botão de ajustes do chat.`
+      : !navigator.onLine ? 'Sem internet agora.' : 'Não consegui falar com a OpenAI' + (e.message ? `: ${e.message}` : '.');
+  } finally { AI.busy = false; await aiPersist(); render(); }
+}
+function aiRetry() { for (let i = AI.history.length - 1; i >= 0; i--) if (AI.history[i].role === 'user') { const t = AI.history[i].text; AI.history.splice(i, 1); AI.err = ''; return aiSend(t); } }
+const aiModelSelect = () => `<select id="ai-model" class="input">${AI_MODELS.map(([v, l]) => `<option value="${v}" ${(AI.cfg ? AI.cfg.model : 'gpt-6-luna') === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}${AI.cfg && !AI_MODELS.some(m => m[0] === AI.cfg.model) ? `<option selected>${esc(AI.cfg.model)}</option>` : ''}</select>`;
+async function aiSaveKey() {
+  const typed = ($('#ai-key').value || '').trim(), model = $('#ai-model').value, er = $('#ai-key-err');
+  const key = typed || (AI.cfg && AI.cfg.key) || '';
+  if (key.length < 20) { er.textContent = 'Cole a chave da OpenAI (começa com sk-).'; er.hidden = false; return; }
+  if (typed) {
+    try { const r = await fetch('https://api.openai.com/v1/models', { headers: { 'Authorization': 'Bearer ' + key } }); if (r.status === 401) { er.textContent = 'A OpenAI não aceitou essa chave. Confira se copiou inteira.'; er.hidden = false; return; } } catch (_) {}
+  }
+  AI.cfg = { key, model }; await aiPersist(); closeSheet(); UI.tab = 'chat'; render(); toast('Chat pronto');
+}
+function openAiSettings() {
+  closeSheet();
+  openSheet('Chat (OpenAI)', () => `<form data-form="ai-key" class="stack" autocomplete="off">
+    <label class="field"><span>Modelo</span>${aiModelSelect()}</label>
+    <label class="field"><span>Trocar a chave (deixe vazio pra manter a atual)</span><input id="ai-key" class="input" type="password" placeholder="sk-…" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <p class="err" id="ai-key-err" hidden></p>
+    <button class="btn primary block" type="submit">Salvar</button></form>
+    <p class="muted small">A chave e as conversas ficam só neste aparelho. Quando você pergunta algo seu, o app manda pra OpenAI só o trecho necessário (ex.: os valores de B12).</p>
+    <button class="btn block" data-act="ai-new">Apagar conversa</button>
+    <button class="btn ghost" style="color:var(--bad)" data-act="ai-remove">Remover a chave deste aparelho</button>`);
+}
+function viewChat() {
+  if (!AI.cfg || !AI.cfg.key) return `<header class="page-head"><h1>Chat</h1></header>
+  <section class="card stack">
+    <b>Converse com o GPT aqui dentro</b>
+    <p class="muted small" style="margin:0">Chat comum. Quando você perguntar algo seu (ex.: "como está minha B12?"), ele busca no app só aquilo. O resto não sai do aparelho.</p>
+    <form data-form="ai-key" class="stack" autocomplete="off">
+      <label class="field"><span>Chave da API da OpenAI</span><input id="ai-key" class="input" type="password" placeholder="sk-…" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <label class="field"><span>Modelo</span>${aiModelSelect()}</label>
+      <p class="err" id="ai-key-err" hidden></p>
+      <button class="btn primary block" type="submit">Salvar e testar</button>
+    </form>
+    <details class="small muted"><summary>Como pegar a chave</summary><ol style="padding-left:18px;margin:8px 0 0;line-height:1.5"><li>platform.openai.com › entrar › <b>API keys</b> › Create new secret key.</li><li>Copie e cole aqui (ela só aparece uma vez).</li><li>Em <b>Billing</b>, ponha crédito e um limite por mês (ex.: US$ 5).</li></ol><p style="margin:8px 0 0">A chave fica só neste aparelho (não vai pro GitHub, nem pro cofre, nem pro backup). No outro aparelho, cole de novo.</p></details>
+  </section>`;
+  const qs = ['Como está minha vitamina B12?', 'Meu peso subiu desde 2024?', 'Qual hábito eu mais falho?'];
+  return `<header class="page-head"><h1>Chat</h1><div class="row"><button class="icon-btn soft" data-act="ai-new" aria-label="Nova conversa">${ico('plus', 20, 2.2)}</button><button class="icon-btn soft" data-act="ai-settings" aria-label="Ajustes do chat">${ico('sliders', 20)}</button></div></header>
+  <div class="chat" id="chat-list" aria-live="polite">
+    ${AI.history.length ? AI.history.map(m => `<div class="msg ${m.role === 'user' ? 'user' : 'assistant'}"><div class="bubble">${m.role === 'user' ? esc(m.text).replace(/\n/g, '<br>') : mdLite(m.text)}</div>${m.used && m.used.length ? `<span class="used">${ico('search', 12, 2.2)} consultou: ${esc(m.used.join(', '))}</span>` : ''}</div>`).join('')
+      : `<div class="chat-empty"><b>Pergunte qualquer coisa.</b><span class="muted small">Sobre você, ele consulta o app. Exemplos:</span>${qs.map(q => `<button class="chip-q" data-act="ai-quick" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`}
+    ${AI.busy ? `<div class="msg assistant"><div class="bubble typing" aria-label="Respondendo"><i></i><i></i><i></i></div></div>` : ''}
+    ${AI.err ? `<div class="msg assistant"><div class="bubble err-b">${esc(AI.err)} <button class="linkish small" data-act="ai-retry">Tentar de novo</button></div></div>` : ''}
+  </div>
+  <form data-form="ai-send" class="chat-input" autocomplete="off">
+    <textarea id="ai-input" class="input" rows="1" placeholder="Mensagem" enterkeyhint="send" aria-label="Mensagem">${esc(UI.aiDraft || '')}</textarea>
+    <button class="btn primary" type="submit" aria-label="Enviar" ${AI.busy ? 'disabled' : ''}>${ico('send', 19, 2)}</button>
+  </form>`;
+}
+
 /* ---------- render ---------- */
 function render() {
   const v = $('#view');
-  v.innerHTML = UI.tab === 'peso' ? viewPeso() : UI.tab === 'resultados' ? viewResultados() : UI.tab === 'saude' ? viewSaude() : UI.tab === 'ajustes' ? viewAjustes() : viewHoje();
+  v.innerHTML = UI.tab === 'peso' ? viewPeso() : UI.tab === 'resultados' ? viewResultados() : UI.tab === 'saude' ? viewSaude() : UI.tab === 'ajustes' ? viewAjustes() : UI.tab === 'chat' ? viewChat() : viewHoje();
+  if (UI.tab === 'chat') requestAnimationFrame(() => window.scrollTo(0, document.documentElement.scrollHeight));
   document.querySelectorAll('.tabbar button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === UI.tab ? 'page' : 'false'));
   if (UI.tab === 'ajustes') persistStatus();
   if (weightEditId && sheetRender) refreshSheet();
@@ -2154,6 +2325,11 @@ const actions = {
   'lock-forgot': () => showLock('forgot'),
   'go-vault': () => { closeSheet(); UI.tab = 'ajustes'; render(); window.scrollTo(0, 0); },
   'customize': () => openCustomize(),
+  'ai-new': async () => { AI.history = []; AI.err = ''; await aiPersist(); closeSheet(); render(); },
+  'ai-settings': () => openAiSettings(),
+  'ai-quick': el => aiSend(el.dataset.q),
+  'ai-retry': () => aiRetry(),
+  'ai-remove': async () => { if (!await askConfirm('Remover a chave da OpenAI deste aparelho? As conversas também somem daqui.', 'Remover')) return; AI.cfg = null; AI.history = []; await aiPersist(); closeSheet(); render(); toast('Chave removida'); },
   'lock-mode': el => setLockMode(el.dataset.v),
   'lock-bio': () => bioUnlock(false),
   'kg-step': el => { const i = $('#kg-input'); if (!i) return; const last = weightsDesc()[0]; const v = parseNum(i.value) || (last ? last.kg : 0); if (!v) return i.focus(); i.value = fmtKg(Math.round((v + +el.dataset.d) * 10) / 10); const er = $('#weigh-err'); if (er) er.hidden = true; },
@@ -2195,6 +2371,8 @@ document.addEventListener('click', e => {
 const forms = {
   'weigh': () => saveWeigh(),
   'unlock': () => tryUnlock(),
+  'ai-key': () => aiSaveKey(),
+  'ai-send': () => aiSend(($('#ai-input') || {}).value),
   'vault-1': () => vaultStep1(),
   'vault-2': () => vaultStep2(),
   'fd': () => saveForm(),
@@ -2209,6 +2387,7 @@ const forms = {
 document.addEventListener('submit', e => { const f = e.target.closest('[data-form]'); if (!f) return; e.preventDefault(); const fn = forms[f.dataset.form]; if (fn) fn(f); });
 let jrTimer = null, pfTimer = null;
 document.addEventListener('input', e => {
+  if (e.target.id === 'ai-input') { UI.aiDraft = e.target.value; e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px'; }
   const t = e.target;
   if (t.dataset.draft && FD) FD[t.dataset.draft] = t.value;
   if (t.dataset.mk && FD) {
@@ -2244,7 +2423,9 @@ document.addEventListener('change', async e => {
   if (t.dataset.taskPeriod) { const tk = S.tasks.find(x => x.id === t.dataset.taskPeriod); if (tk) { tk.period = t.value; await save(); render(); } }
   if (t.dataset.lockgrace != null && t.id === 'lock-grace') { Lock.cfg.graceMin = +t.value; await Lock.persist(); }
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('#viewer-root').hidden) actions['viewer-close'](); else closeSheet(); } });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.target.id === 'ai-input') { e.preventDefault(); aiSend(e.target.value); return; }
+  if (e.key === 'Escape') { if (!$('#viewer-root').hidden) actions['viewer-close'](); else closeSheet(); } });
 if (window.visualViewport) { visualViewport.addEventListener('resize', syncViewport); visualViewport.addEventListener('scroll', syncViewport); }
 window.addEventListener('online', () => { resolveMissingLabels(); Vault.schedule(500); });
 window.addEventListener('pagehide', () => { if (!Vault.locked) Lock.touch(); });
@@ -2269,6 +2450,7 @@ document.addEventListener('visibilitychange', () => {
   await load();
   await Vault.init();
   await Lock.init();
+  await aiInit();
   if (Vault.cfg && !Vault.key) showLock('password');
   else if (Lock.active() && Lock.expired()) showLock(Lock.cfg.mode);
   render();
