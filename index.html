@@ -393,7 +393,7 @@ details summary{cursor:pointer;color:var(--accent);font-weight:650}
 <script>
 'use strict';
 const APP_ID = 'prontuario-de-bolso';
-const APP_VERSION = '3.3';
+const APP_VERSION = '3.4';
 const PREVIEW = !!window.PREVIEW_MODE;
 
 /* ---------- utils ---------- */
@@ -1556,12 +1556,63 @@ async function importPack(p) {
   const upd = ex.filter(e => has(S.exams, e)).length + cs.filter(c => has(S.consults, c)).length + ws.filter(w => has(S.weights, w)).length;
   const title = ex.length === 1 && !cs.length && !ws.length ? `${ex[0].title || 'Exame'} de ${fmtDK(ex[0].date)} (${plural((ex[0].markers || []).length, 'resultado', 'resultados')})` : n;
   if (!await askConfirm(`Adicionar ao app: ${title}?${upd ? ` ${upd === 1 ? 'Um item já existia e vai ser atualizado.' : `${upd} itens já existiam e vão ser atualizados.`}` : ''} O resto dos seus dados não muda.`, 'Adicionar', false)) return;
-  for (const f of p.files || []) { try { await Store.put('files', f.id, { buf: b64ToBuf(f.data), type: f.type, name: f.name }); } catch (_) {} }
   const before = computeGame();
-  const up = (arr, items) => { for (const it of items) { const i = arr.findIndex(x => x.id === it.id); if (i >= 0) arr[i] = it; else arr.push(it); if (S.meta.deleted) delete S.meta.deleted[it.id]; } };
-  up(S.exams, ex); up(S.consults, cs); up(S.weights, ws);
+  await applyPack(p);
   migrate(); await save(); render(); xpToast(before, `Adicionado: ${n}`);
 }
+async function applyPack(p) {
+  const ex = p.exams || [], cs = p.consults || [], ws = p.weights || [];
+  for (const f of p.files || []) { try { await Store.put('files', f.id, { buf: b64ToBuf(f.data), type: f.type, name: f.name }); } catch (_) {} }
+  S.meta.deleted ||= {};
+  const up = (arr, items) => { for (const it of items) { const i = arr.findIndex(x => x.id === it.id); if (i >= 0) arr[i] = it; else arr.push(it); delete S.meta.deleted[it.id]; } };
+  up(S.exams, ex); up(S.consults, cs); up(S.weights, ws);
+  return p.label || [ex.length && plural(ex.length, 'exame', 'exames'), cs.length && plural(cs.length, 'consulta', 'consultas'), ws.length && plural(ws.length, 'peso', 'pesos')].filter(Boolean).join(', ');
+}
+
+/* caixa de entrada: o Claude tranca um pacote com a chave PÚBLICA (inbox-key.json no cofre);
+   só o app, com a chave privada guardada criptografada pela senha do cofre, abre. Depois de juntar, apaga da caixa. */
+const Inbox = {
+  priv: null, done: [],
+  rsa: { name: 'RSA-OAEP', hash: 'SHA-256' },
+  async ensureKey(root) {
+    if (this.priv) return;
+    if (root.some(x => x.name === 'inbox-key.json')) {
+      const j = JSON.parse(TD.decode(await GH.raw('inbox-key.json')));
+      const privJwk = JSON.parse(TD.decode(await decBytes(Vault.key, unb64(j.privEnc))));
+      this.priv = await crypto.subtle.importKey('jwk', privJwk, this.rsa, false, ['decrypt']);
+      return;
+    }
+    const kp = await crypto.subtle.generateKey({ ...this.rsa, modulusLength: 3072, publicExponent: new Uint8Array([1, 0, 1]) }, true, ['encrypt', 'decrypt']);
+    const pub = await crypto.subtle.exportKey('jwk', kp.publicKey), privJwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+    const body = { app: APP_ID, kind: 'inbox-key', v: 1, alg: 'RSA-OAEP-256 + A256GCM', created: new Date().toISOString(), device: deviceName(),
+      note: 'Chave PÚBLICA da caixa de entrada do app. Com ela só dá pra trancar arquivos pro app; abrir, só o app (a chave privada abaixo está criptografada com a senha do cofre).',
+      pub: { kty: pub.kty, n: pub.n, e: pub.e, alg: pub.alg }, privEnc: b64(await encBytes(Vault.key, TE.encode(JSON.stringify(privJwk)))) };
+    try { await GH.put('inbox-key.json', TE.encode(JSON.stringify(body, null, 1)), null, 'Caixa de entrada: chave pública'); }
+    catch (e) { if (e.code === 'conflict') return this.ensureKey(await GH.list('')); throw e; }
+    try { await GH.put('inbox/LEIA.md', TE.encode('# Caixa de entrada do Prontuário\n\nArquivos .json nesta pasta chegam trancados com a chave pública (inbox-key.json). O app abre, junta aos seus dados e apaga daqui sozinho.\n'), null, 'Caixa de entrada'); } catch (_) {}
+    this.priv = await crypto.subtle.importKey('jwk', privJwk, this.rsa, false, ['decrypt']);
+  },
+  async open(env) {
+    const raw = await crypto.subtle.decrypt(this.rsa, this.priv, unb64(env.ek));
+    const k = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+    return JSON.parse(TD.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(env.iv) }, k, unb64(env.data))));
+  },
+  async process(root) {
+    await this.ensureKey(root);
+    const items = (await GH.list('inbox')).filter(x => x.type === 'file' && /\.json$/i.test(x.name));
+    const labels = [];
+    for (const it of items) {
+      try {
+        const env = JSON.parse(TD.decode(await GH.raw(it.path)));
+        const pack = await this.open(env);
+        if (pack.app !== APP_ID || pack.kind !== 'pacote') throw new Error('formato');
+        labels.push(await applyPack(pack)); this.done.push(it);
+      } catch (e) { if (e.code === 'auth') throw e; console.warn('caixa de entrada', it.name, e && e.message); }
+    }
+    return labels;
+  },
+  async cleanup() { const d = this.done.splice(0); for (const it of d) { try { await GH.del(it.path, it.sha, 'Caixa de entrada: recebido no app'); } catch (_) {} } }
+};
 
 /* ---------- XP feedback ---------- */
 function xpToast(before, msg) {
@@ -1618,6 +1669,7 @@ const GH = {
     if (!r.ok) throw new Error('put ' + r.status);
     return (await r.json()).content.sha;
   },
+  async del(path, sha, message) { const r = await this.req(`${this.base()}/contents/${path}`, { method: 'DELETE', body: JSON.stringify({ message, sha }) }); if (!r.ok && r.status !== 404 && r.status !== 409 && r.status !== 422) throw new Error('del ' + r.status); },
   async commits(path) { const r = await this.req(`${this.base()}/commits?path=${encodeURIComponent(path)}&per_page=40`); if (!r.ok) throw new Error('commits ' + r.status); return r.json(); }
 };
 
@@ -1691,6 +1743,10 @@ const Vault = {
         if (JSON.stringify(S) === plain) this.cfg.lastHash = await sha256hex(plain);
         render();
       }
+      try {
+        const got = await Inbox.process(root);
+        if (got.length) { S.meta.updatedAt = new Date().toISOString(); migrate(); await save({ silent: true }); render(); toast(`Chegou do Claude: ${esc(got.join(' · '))}`, 4200); }
+      } catch (e) { if (e.code === 'auth') throw e; console.warn('caixa de entrada', e && e.message); }
       const remoteFiles = new Set((await GH.list('files')).map(x => x.name.replace(/\.bin$/, '')));
       for (const f of fileRefs(S)) {
         let local = null; try { local = await Store.get('files', f.id); } catch (_) {}
@@ -1709,6 +1765,7 @@ const Vault = {
         this.cfg.lastSha = await GH.put('vault.json', TE.encode(JSON.stringify(body)), remoteSha, `Atualização ${fmtDate(now)} ${fmtTime(now)} (${deviceName()})`);
         this.cfg.lastHash = h;
       }
+      await Inbox.cleanup();
       this.cfg.lastSync = new Date().toISOString(); this.cfg.error = null;
     } catch (e) {
       if (e.code === 'conflict') retry = true;
@@ -1963,9 +2020,19 @@ async function checkUpdate(manual) {
     const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) throw new Error('http ' + r.status);
     const j = await r.json();
-    if (isNewer(j.version, APP_VERSION)) { Upd.info = j; if (UI.tab === 'hoje' || UI.tab === 'ajustes') render(); if (manual) toast(`Versão ${esc(j.version)} disponível`); }
+    if (isNewer(j.version, APP_VERSION)) {
+      Upd.info = j; if (UI.tab === 'hoje' || UI.tab === 'ajustes') render(); if (manual) toast(`Versão ${esc(j.version)} disponível`);
+      // sozinho: atualiza quando não tem nada aberto (no máximo 1 tentativa a cada 10 min por versão)
+      let tried = 0; try { tried = +sessionStorage.getItem('upd-' + j.version) || 0; } catch (_) {}
+      if (!manual && Date.now() - tried > 600000) autoUpdate(j.version);
+    }
     else { Upd.info = null; if (manual) toast(`Você já está na versão mais nova (${APP_VERSION})`); }
   } catch (_) { if (manual) toast('Não consegui verificar agora.'); }
+}
+function autoUpdate(ver, n = 0) {
+  if (sheetRender || Vault.locked || Vault.running || Upd.busy) { if (n < 40) setTimeout(() => autoUpdate(ver, n + 1), 3000); return; }
+  try { sessionStorage.setItem('upd-' + ver, String(Date.now())); } catch (_) {}
+  applyUpdate();
 }
 async function applyUpdate() {
   if (Upd.busy) return; Upd.busy = true; toast('Atualizando…', 6000);

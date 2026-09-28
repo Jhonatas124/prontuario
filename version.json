@@ -1,5 +1,5 @@
 {
-  "version": "3.3",
+  "version": "3.4",
   "date": "2026-09-28",
-  "notes": "Hábitos por horário, botão do próximo hábito, peso em 2 toques, gráfico de peso com todo o histórico, Face ID opcional e exame sem digitar."
+  "notes": "Caixa de entrada: o que você mandar pro Claude (exame, peso, consulta) entra no app sozinho. E o app passa a se atualizar sozinho."
 }
