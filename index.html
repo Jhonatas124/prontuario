@@ -321,6 +321,35 @@ select.input{background-image:linear-gradient(45deg,transparent 50%,var(--muted)
 .confirm b{font-size:17px}
 .confirm .input{background:var(--bg)}
 details summary{cursor:pointer;color:var(--accent);font-weight:650}
+
+/* v3.2: tela inicial, personalizar */
+.home-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.hh-txt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.hh-txt h1{font-size:27px}
+.qa{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qa button{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:12px;display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;color:var(--ink);min-height:64px;min-width:0}
+.qa button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.qa-ico{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+.qa-t{display:flex;flex-direction:column;gap:1px;min-width:0}
+.qa-t b{font-size:15px;line-height:1.2}
+.qa-t small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.day-title h2{font-size:19px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;font-size:15px}
+.set-row+.set-row{border-top:1px solid var(--line)}
+.switch{appearance:none;-webkit-appearance:none;width:50px;height:30px;border-radius:99px;background:var(--line-strong);position:relative;cursor:pointer;flex:none;transition:background .15s;margin:0}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.switch:checked{background:var(--accent)}
+.switch:checked::after{transform:translateX(20px)}
+.switch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chart .goal{stroke:var(--gold);stroke-width:1.5;stroke-dasharray:5 4}
+.chart .goal-lbl{fill:var(--gold);font-size:10.5px;font-weight:700}
+.single-list{padding:0;overflow:hidden}
+.single-list .sl-head{padding:12px 14px 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:650}
+.single-list ul{list-style:none;margin:0;padding:0}
+.single-list li{border-top:1px solid var(--line)}
+.single-list .rc-val b{font-size:17px}
+.chip.k-note{background:var(--surface-2);color:var(--muted)}
+@media (max-width:360px){.qa{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -341,7 +370,7 @@ details summary{cursor:pointer;color:var(--accent);font-weight:650}
 <script>
 'use strict';
 const APP_ID = 'prontuario-de-bolso';
-const APP_VERSION = '3.1';
+const APP_VERSION = '3.2';
 const PREVIEW = !!window.PREVIEW_MODE;
 
 /* ---------- utils ---------- */
@@ -418,7 +447,10 @@ const P = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>',
   book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>',
   refresh: '<path d="M20 11a8 8 0 0 0-14.5-4.6L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.5 4.6L20 16"/><path d="M20 20.5V16h-4.5"/>',
-  note: '<path d="M5 3.5h10l4 4v13H5z"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/>'
+  note: '<path d="M5 3.5h10l4 4v13H5z"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/>',
+  sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  flask: '<path d="M9 3h6"/><path d="M10 3v6.2L4.8 18.3A1.8 1.8 0 0 0 6.4 21h11.2a1.8 1.8 0 0 0 1.6-2.7L14 9.2V3"/><path d="M7.2 15h9.6"/>',
+  target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8"/>'
 };
 const ico = (n, s = 18, sw = 1.9) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || P.outro}</svg>`;
 const KINDS = [['casa', 'Casa'], ['saude', 'Saúde'], ['academia', 'Academia'], ['trabalho', 'Trabalho'], ['outro', 'Outro']];
@@ -474,15 +506,18 @@ const Store = {
 };
 
 let S = null;
+const DEFAULT_SETTINGS = { name: '', weightGoal: null, missions: { full: 4, weight: 2, energy: 5 }, showGame: true, showEnergy: true };
 function freshState() {
   return { v: 2, created: new Date().toISOString(), tasks: DEFAULT_TASKS.map(t => ({ id: uid(), key: t.key, name: t.name, active: true })),
     checks: {}, journal: {}, weights: [], exams: [], consults: [], places: [],
     profile: { blood: '', vision: '', allergies: '', meds: '', conditions: '', emergency: '' },
+    settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
     meta: { lastBackup: null, backupLog: [], hideInstall: false, start: dayKey() } };
 }
 function migrate() {
   S.tasks ||= []; S.checks ||= {}; S.journal ||= {}; S.weights ||= []; S.exams ||= []; S.consults ||= []; S.places ||= [];
   S.profile = { blood: '', vision: '', allergies: '', meds: '', conditions: '', emergency: '', ...(S.profile || {}) };
+  S.settings = { ...DEFAULT_SETTINGS, ...(S.settings || {}), missions: { ...DEFAULT_SETTINGS.missions, ...((S.settings || {}).missions || {}) } };
   S.meta = { backupLog: [], hideInstall: false, ...(S.meta || {}) };
   if (!S.meta.start) { const ks = Object.keys(S.checks).sort(); S.meta.start = ks[0] || dayKey(); }
   for (const w of S.weights) if (w.locStatus === 'pending') { w.locStatus = w.loc ? 'ok' : 'none'; if (!w.loc) w.locError = 'O app fechou antes de pegar a localização.'; }
@@ -567,6 +602,7 @@ function placeOf(e) {
   }
   if (e.address) return { name: e.address, kind: 'outro', sub: '' };
   if (e.loc) return { name: `${e.loc.lat.toFixed(5)}, ${e.loc.lng.toFixed(5)}`, kind: 'outro', sub: '' };
+  if (e.source === 'anotação') return { name: 'Anotado à mão', kind: 'note', sub: 'sem hora e sem local' };
   return { name: 'Sem localização', kind: 'semloc', sub: e.locError || '' };
 }
 const placeChip = e => { const p = placeOf(e); return `<span class="chip k-${p.kind}">${ico(p.kind, 14, 2)}<span>${esc(p.name)}</span></span>`; };
@@ -627,13 +663,14 @@ function niceStep(range, count) {
   const raw = range / count, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
   return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
 }
-function lineChart(pts, { refMin = null, refMax = null, h = 190, dec = 1, area = true } = {}) {
+function lineChart(pts, { refMin = null, refMax = null, h = 190, dec = 1, area = true, goal = null } = {}) {
   if (pts.length < 2) return `<p class="muted small">Com 2 registros ou mais aparece o gráfico aqui.</p>`;
   const W = 360, H = h, L = 38, R = 48, T = 16, B = 24;
   const ys = pts.map(p => p.v);
   let lo = Math.min(...ys), hi = Math.max(...ys);
   if (refMin != null && refMin < lo && lo - refMin < (hi - lo || 1) * 2) lo = refMin;
   if (refMax != null && refMax > hi && refMax - hi < (hi - lo || 1) * 2) hi = refMax;
+  if (goal != null && Math.abs(goal - (lo + hi) / 2) < Math.max(hi - lo, 2) * 3) { lo = Math.min(lo, goal); hi = Math.max(hi, goal); }
   if (hi - lo < 1e-9) { lo -= Math.max(1, Math.abs(lo) * 0.02); hi += Math.max(1, Math.abs(hi) * 0.02); }
   const step = niceStep(hi - lo, 4);
   lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
@@ -654,6 +691,7 @@ function lineChart(pts, { refMin = null, refMax = null, h = 190, dec = 1, area =
   const xl = t => spanDays > 330 ? new Date(t).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('. de ', '/').replace(' de ', '/') : fmtShort(t);
   g += `<text class="axis" x="${L}" y="${H - 6}" text-anchor="start">${xl(t0)}</text><text class="axis" x="${W - R}" y="${H - 6}" text-anchor="end">${xl(t1)}</text>`;
   if (spanDays > 6) g += `<text class="axis" x="${((L + W - R) / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${xl((t0 + t1) / 2)}</text>`;
+  if (goal != null && goal >= lo && goal <= hi) { const gy = sy(goal).toFixed(1); g += `<line class="goal" x1="${L}" x2="${W - R}" y1="${gy}" y2="${gy}"/><text class="goal-lbl" x="${W - R + 4}" y="${(+gy + 3.5).toFixed(1)}">meta</text>`; }
   const xy = pts.map(p => [sx(p.t), sy(p.v)]);
   const d = xy.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('');
   if (area) g += `<path class="area" d="${d}L${xy[xy.length - 1][0].toFixed(1)} ${H - B}L${xy[0][0].toFixed(1)} ${H - B}Z"/>`;
@@ -694,10 +732,11 @@ function missionsFor(ws) {
   const full = days.filter(dayComplete).length;
   const wDays = new Set(S.weights.map(w => dayKey(new Date(w.ts))).filter(d => d >= ws && d <= days[6])).size;
   const eDays = days.filter(d => S.journal[d] && S.journal[d].energy != null).length;
+  const M = (S.settings && S.settings.missions) || DEFAULT_SETTINGS.missions;
   return [
-    { id: 'm-full', name: 'Feche 4 dias completos', got: Math.min(full, 4), goal: 4, icon: 'check' },
-    { id: 'm-weight', name: 'Pese 2 vezes', got: Math.min(wDays, 2), goal: 2, icon: 'scale' },
-    { id: 'm-energy', name: 'Registre a energia em 5 dias', got: Math.min(eDays, 5), goal: 5, icon: 'bolt' }
+    { id: 'm-full', name: `Feche ${M.full} ${M.full === 1 ? 'dia completo' : 'dias completos'}`, got: Math.min(full, M.full), goal: M.full, icon: 'check' },
+    { id: 'm-weight', name: `Pese ${M.weight} ${M.weight === 1 ? 'vez' : 'vezes'}`, got: Math.min(wDays, M.weight), goal: M.weight, icon: 'scale' },
+    { id: 'm-energy', name: `Registre a energia em ${M.energy} ${M.energy === 1 ? 'dia' : 'dias'}`, got: Math.min(eDays, M.energy), goal: M.energy, icon: 'bolt' }
   ];
 }
 function computeGame() {
@@ -785,39 +824,77 @@ function viewHoje() {
   const ret = nextReturn();
   const retBanner = ret && daysBetween(today, ret.returnDate) <= 30 ? `<button class="quick" data-act="consult-open" data-id="${ret.id}"><span class="q-ico">${ico('steth', 20)}</span><span class="q-txt"><b>Retorno ${ret.specialty ? 'de ' + esc(ret.specialty) : ''}</b><span class="muted small">${fmtDK(ret.returnDate)} · ${daysBetween(today, ret.returnDate) === 0 ? 'hoje' : 'em ' + plural(daysBetween(today, ret.returnDate), 'dia', 'dias')}</span></span>${ico('next', 18)}</button>` : '';
   const pctLv = Math.round((G.xp - lv.base) / (lv.next - lv.base) * 100);
-  return `${updBanner()}${banner}${vaultBanner}
-  <section class="day-head">
-    <button class="icon-btn soft" data-act="day-prev" aria-label="Dia anterior">${ico('prev', 20, 2.2)}</button>
-    <div class="day-title"><span class="eyebrow">${eyebrow}</span><h1>${esc(fmtDayLong(k))}</h1></div>
-    <button class="icon-btn soft" data-act="day-next" aria-label="Próximo dia" ${k >= today ? 'disabled' : ''}>${ico('next', 20, 2.2)}</button>
-  </section>
-  <button class="card lvl-card" data-act="game-open" aria-label="Ver nível, missões e conquistas">
-    <svg class="ring" width="70" height="70" viewBox="0 0 70 70" aria-hidden="true"><circle class="bg" cx="35" cy="35" r="${Rr}" fill="none" stroke-width="7"/><circle class="fg" cx="35" cy="35" r="${Rr}" fill="none" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}" transform="rotate(-90 35 35)"/><text x="35" y="41" text-anchor="middle">${done}/${ts.length}</text></svg>
+  const st = S.settings, hr = new Date().getHours(), greet = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite';
+  const left = ts.length - done;
+  const ring = `<svg class="ring" width="70" height="70" viewBox="0 0 70 70" aria-hidden="true"><circle class="bg" cx="35" cy="35" r="${Rr}" fill="none" stroke-width="7"/><circle class="fg" cx="35" cy="35" r="${Rr}" fill="none" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}" transform="rotate(-90 35 35)"/><text x="35" y="41" text-anchor="middle">${done}/${ts.length}</text></svg>`;
+  const levelCard = st.showGame ? `<button class="card lvl-card" data-act="game-open" aria-label="Ver nível, missões e conquistas">${ring}
     <span class="lvl-main">
       <span class="l-top"><b>Nível ${lv.lvl} · <span class="lvl-name">${esc(lv.name)}</span></b><span class="muted small num">${G.xp - lv.base}/${lv.next - lv.base} XP</span></span>
       <span class="bar" aria-hidden="true"><i style="width:${pctLv}%"></i></span>
       <span class="l-stats"><span>${ico('flame', 13, 2)} <b>${G.full}</b> ${G.full === 1 ? 'dia completo' : 'dias completos'}</span>${G.anchor ? `<span>${ico('shield', 13, 2)} <b>${G.clean}</b> ${G.clean === 1 ? 'dia limpo' : 'dias limpo'}</span>` : ''}<span>${ico('trophy', 13, 2)} <b>${G.badges.filter(b => b.got).length}</b>/${G.badges.length}</span></span>
-    </span>
-  </button>
+    </span></button>`
+    : `<section class="card progress">${ring}<div class="p-txt"><b>${done} de ${ts.length} hábitos</b><span class="muted small">${frac === 1 ? 'Dia completo.' : left === 1 ? 'Falta 1.' : `Faltam ${left}.`}</span></div></section>`;
+  const qa = `<nav class="qa" aria-label="Atalhos">
+    <button data-act="weigh"><span class="qa-ico">${ico('peso', 22)}</span><span class="qa-t"><b>Registrar peso</b><small>${lastW ? `último ${fmtKg(lastW.kg)} kg` : 'com data, hora e local'}</small></span></button>
+    <button data-act="exam-new"><span class="qa-ico">${ico('flask', 22)}</span><span class="qa-t"><b>Novo exame</b><small>${S.exams.length ? plural(S.exams.length, 'exame', 'exames') : 'resultados e PDF'}</small></span></button>
+    <button data-act="consult-new"><span class="qa-ico">${ico('steth', 22)}</span><span class="qa-t"><b>Nova consulta</b><small>${S.consults.length ? plural(S.consults.length, 'consulta', 'consultas') : 'médico e retorno'}</small></span></button>
+    <button data-act="customize"><span class="qa-ico">${ico('sliders', 22)}</span><span class="qa-t"><b>Personalizar</b><small>hábitos e metas</small></span></button>
+  </nav>`;
+  return `${updBanner()}${banner}${vaultBanner}
+  <header class="home-head"><div class="hh-txt"><h1>${greet}${st.name ? ', ' + esc(st.name) : ''}</h1><span class="muted">${k !== today ? 'Vendo um dia anterior' : ts.length ? (left ? `${left === 1 ? 'Falta 1 hábito' : `Faltam ${left} hábitos`} hoje` : 'Dia completo. Mandou bem.') : 'Monte sua lista de hábitos em Personalizar.'}</span></div>
+    <button class="icon-btn soft" data-act="customize" aria-label="Personalizar">${ico('sliders', 20)}</button></header>
+  ${qa}
   ${retBanner}
+  <section class="day-head">
+    <button class="icon-btn soft" data-act="day-prev" aria-label="Dia anterior">${ico('prev', 20, 2.2)}</button>
+    <div class="day-title"><span class="eyebrow">${eyebrow}</span><h2>${esc(fmtDayLong(k))}</h2></div>
+    <button class="icon-btn soft" data-act="day-next" aria-label="Próximo dia" ${k >= today ? 'disabled' : ''}>${ico('next', 20, 2.2)}</button>
+  </section>
+  ${levelCard}
   ${ts.length ? `<ul class="list" aria-label="Hábitos">${ts.map(t => {
     const on = c[t.id]; const sameDay = on && dayKey(new Date(on)) === k;
-    const st = habitStreak(t.id, k);
-    const extra = t.key === 'nofap' && k === today ? (G.clean ? `${G.clean} ${G.clean === 1 ? 'dia' : 'dias'} limpo` : '') : st >= 2 ? `${st} dias seguidos` : '';
+    const sk = habitStreak(t.id, k);
+    const extra = t.key === 'nofap' && k === today ? (G.clean ? `${G.clean} ${G.clean === 1 ? 'dia' : 'dias'} limpo` : '') : sk >= 2 ? `${sk} dias seguidos` : '';
     const sub = [on ? (sameDay ? 'Feito às ' + fmtTime(on) : 'Marcado depois') : '', extra].filter(Boolean).join(' · ');
     return `<li><button class="task ${on ? 'on' : ''}" data-act="toggle" data-id="${t.id}" aria-pressed="${on ? 'true' : 'false'}">
       <span class="box">${ico('check', 16, 3)}</span>
       <span class="tname"><span>${esc(t.name)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
       <span class="dots" aria-hidden="true" title="Últimos 7 dias">${last7.map(d => `<i class="${isDone(d, t.id) ? 'y' : ''}${d === k ? ' cur' : ''}"></i>`).join('')}</span>
     </button></li>`; }).join('')}</ul>
-  <div class="legend-7 muted small">bolinhas = últimos 7 dias · ${XP.check} XP por hábito, +${XP.full} no dia completo</div>` : `<div class="empty"><b>Nenhum hábito</b>Adicione os hábitos que você quer marcar todo dia.</div>`}
-  <section class="card stack" aria-label="Energia do dia">
+  <div class="row between" style="margin-top:-8px"><button class="linkish small" data-act="edit-tasks">${ico('edit', 14)} Editar hábitos</button><span class="muted small">bolinhas = últimos 7 dias</span></div>` : `<div class="empty"><b>Nenhum hábito</b>Toque em Personalizar pra montar sua lista.</div>`}
+  ${st.showEnergy ? `<section class="card stack" aria-label="Energia do dia">
     <div class="row between"><b>Energia ${k === today ? 'de hoje' : 'do dia'}</b><button class="linkish" data-act="journal-open">Detalhes do dia</button></div>
     <div class="energy" role="group" aria-label="Energia de 0 a 10">${Array.from({ length: 11 }, (_, i) => `<button data-act="energy" data-v="${i}" aria-pressed="${j.energy === i}">${i}</button>`).join('')}</div>
     <div class="energy-scale"><span>0 = sem energia</span><span>10 = no topo</span></div>
-  </section>
-  <button class="btn ghost" data-act="edit-tasks">${ico('edit', 17)} Editar hábitos</button>
-  <button class="quick" data-act="weigh"><span class="q-ico">${ico('peso', 22)}</span><span class="q-txt"><b>Registrar peso</b><span class="muted small">${lastW ? `Último: ${fmtKg(lastW.kg)} kg · ${relDay(lastW.ts)}` : 'Grava data, hora e onde você está'}</span></span>${ico('next', 18)}</button>`;
+  </section>` : ''}`;
+}
+
+function openCustomize() {
+  closeSheet();
+  openSheet('Personalizar', () => {
+    const st = S.settings, M = st.missions;
+    const sel = (key, v) => `<select id="st-m-${key}" class="input" style="width:88px" data-stm="${key}">${[1, 2, 3, 4, 5, 6, 7].map(n => `<option value="${n}" ${n === v ? 'selected' : ''}>${n}</option>`).join('')}</select>`;
+    return `<div class="stack">
+      <label class="field"><span>Seu nome (aparece na saudação)</span><input id="st-name" class="input" data-st="name" value="${esc(st.name)}" placeholder="Seu nome"></label>
+      <div class="section-label">Hábitos do dia</div>
+      <button class="btn block" data-act="edit-tasks">${ico('edit', 17)} Editar hábitos (${activeTasks().length})</button>
+      <div class="section-label">Metas</div>
+      <label class="field"><span>Meta de peso (kg)</span><input id="st-wgoal" class="input" inputmode="decimal" data-st="weightGoal" value="${st.weightGoal != null ? fmtKg(st.weightGoal) : ''}" placeholder="Ex.: 55,0 (deixe vazio pra não usar)"></label>
+      <div class="card" style="padding:4px 14px">
+        <div class="set-row"><span>Dias completos por semana</span>${sel('full', M.full)}</div>
+        <div class="set-row"><span>Pesagens por semana</span>${sel('weight', M.weight)}</div>
+        <div class="set-row"><span>Dias com energia registrada</span>${sel('energy', M.energy)}</div>
+      </div>
+      <p class="muted small" style="margin:-4px 0 0">São as missões da semana (+${XP.mission} XP cada).</p>
+      <div class="section-label">Tela inicial</div>
+      <div class="card" style="padding:4px 14px">
+        <label class="set-row"><span>Mostrar nível e conquistas</span><input type="checkbox" class="switch" id="st-game" data-stb="showGame" ${st.showGame ? 'checked' : ''}></label>
+        <label class="set-row"><span>Mostrar energia do dia</span><input type="checkbox" class="switch" id="st-energy" data-stb="showEnergy" ${st.showEnergy ? 'checked' : ''}></label>
+      </div>
+      <button class="btn" data-act="go-vault">${ico('shield', 17)} Cofre, locais salvos e backup</button>
+      <button class="btn primary block" data-act="close-sheet">Pronto</button>
+    </div>`;
+  });
 }
 
 function openGame() {
@@ -896,6 +973,7 @@ function weighBody() {
       <div class="meta-row">${ico('cal', 17)}<span>${esc(fmtDayLong(dayKey(now)))} · ${fmtTime(now)}</span></div>
       <div class="meta-row" id="weigh-loc">${weighLocHtml()}</div>
     </div>
+    <details class="small"><summary>Registrar peso de outro dia (anotado)</summary><label class="field" style="margin-top:8px"><span>Data</span><input id="kg-date" class="input" type="date" max="${dayKey()}"></label><span class="muted">Fica sem hora e sem local.</span></details>
     <p class="err" id="weigh-err" hidden></p>
     <button class="btn primary block" type="submit">Salvar peso</button>
   </form>`;
@@ -909,13 +987,22 @@ async function saveWeigh() {
   const kg = parseNum($('#kg-input').value), err = $('#weigh-err');
   if (!(kg >= 20 && kg <= 350)) { err.textContent = 'Digite o peso em kg, por exemplo 82,4.'; err.hidden = false; return; }
   const w = weighing, before = computeGame();
-  const entry = { id: uid(), kg: Math.round(kg * 10) / 10, ts: new Date().toISOString(), loc: null, placeId: null, label: null, address: null, kind: null, locStatus: 'pending' };
-  applyLoc(entry, w);
+  const dsel = $('#kg-date') ? $('#kg-date').value : '';
+  const past = dsel && dsel < dayKey();
+  const entry = { id: uid(), kg: Math.round(kg * 10) / 10, ts: past ? new Date(dsel + 'T12:00:00').toISOString() : new Date().toISOString(), loc: null, placeId: null, label: null, address: null, kind: null, locStatus: past ? 'none' : 'pending' };
+  if (past) { entry.timeUnknown = true; entry.source = 'anotação'; } else applyLoc(entry, w);
   S.weights.push(entry); await save();
-  if (w && w.status !== 'ok' && w.status !== 'error') w.promise.then(() => finishLoc(entry.id, w), () => finishLoc(entry.id, w));
+  if (!past && w && w.status !== 'ok' && w.status !== 'error') w.promise.then(() => finishLoc(entry.id, w), () => finishLoc(entry.id, w));
   closeSheet(); render(); xpToast(before, `Peso salvo: ${fmtKg(entry.kg)} kg`);
 }
 async function finishLoc(id, w) { const e = S.weights.find(x => x.id === id); if (!e) return; applyLoc(e, w); await save(); render(); }
+const whenTxt = w => w.timeUnknown ? `${fmtDate(w.ts)} (sem hora)` : `${fmtDate(w.ts)} às ${fmtTime(w.ts)}`;
+function goalTxt(last) {
+  const g = S.settings.weightGoal;
+  if (g == null) return `<button class="linkish" style="font-size:14px" data-act="customize">${ico('target', 15)} Definir meta de peso</button>`;
+  const diff = Math.round((g - last.kg) * 10) / 10;
+  return `<span class="small" style="color:var(--gold);font-weight:650">${ico('target', 15)} ${Math.abs(diff) < 0.05 ? `Na meta (${fmtKg(g)} kg)` : `Faltam ${fmtKg(Math.abs(diff))} kg pra meta de ${fmtKg(g)} kg`}</span>`;
+}
 function viewPeso() {
   const ws = weightsDesc(), last = ws[0], prev = ws[1];
   let hero;
@@ -925,7 +1012,8 @@ function viewPeso() {
     hero = `<section class="card hero-w"><span class="eyebrow">Último registro</span>
       <div class="big-num">${fmtKg(last.kg)}<small>kg</small></div>
       ${d != null ? `<span class="delta ${dCls}">${d > 0 ? '+' : d < 0 ? '−' : '±'}${fmtKg(Math.abs(d))} kg <span class="muted" style="font-weight:500">desde ${fmtShort(prev.ts)}</span></span>` : ''}
-      <div class="row"><span class="muted small">${fmtDate(last.ts)} às ${fmtTime(last.ts)}</span>${placeChip(last)}</div></section>`;
+      <div class="row"><span class="muted small">${whenTxt(last)}</span>${placeChip(last)}</div>
+      ${goalTxt(last)}</section>`;
   } else hero = `<div class="empty"><b>Nenhum peso registrado</b>Cada registro guarda data, hora e o local onde você está.</div>`;
   const now = Date.now(), days = { '30': 30, '90': 90, '365': 365 }[UI.range];
   const pts = ws.filter(w => !days || now - Date.parse(w.ts) <= days * 864e5).map(w => ({ t: Date.parse(w.ts), v: w.kg })).reverse();
@@ -937,11 +1025,11 @@ function viewPeso() {
   const seg = [['30', '30 dias'], ['90', '90 dias'], ['365', '1 ano'], ['all', 'Tudo']].map(([v, n]) => `<button data-act="range" data-v="${v}" aria-pressed="${UI.range === v}">${n}</button>`).join('');
   return `<header class="page-head"><h1>Peso</h1><button class="btn primary" data-act="weigh">${ico('plus', 18, 2.2)} Registrar</button></header>
   ${hero}
-  ${ws.length ? `<section class="card stack"><div class="seg" role="group" aria-label="Período">${seg}</div>${lineChart(pts)}${stats}</section>
+  ${ws.length ? `<section class="card stack"><div class="seg" role="group" aria-label="Período">${seg}</div>${lineChart(pts, { goal: S.settings.weightGoal })}${stats}</section>
   <h2 class="sec">Histórico</h2>
   <ul class="list">${ws.map((w, i) => { const pv = ws[i + 1]; const d = pv ? Math.round((w.kg - pv.kg) * 10) / 10 : null;
     return `<li><button class="row-btn" data-act="weight-open" data-id="${w.id}"><div class="w-row">
-      <span class="w-when">${fmtDate(w.ts)} <span class="muted" style="font-weight:500">· ${fmtTime(w.ts)}</span></span><span class="w-kg">${fmtKg(w.kg)} kg</span>
+      <span class="w-when">${fmtDate(w.ts)}${w.timeUnknown ? '' : ` <span class="muted" style="font-weight:500">· ${fmtTime(w.ts)}</span>`}</span><span class="w-kg">${fmtKg(w.kg)} kg</span>
       <span>${placeChip(w)}</span><span class="w-d ${d == null ? 'muted' : d > 0 ? 'delta up' : d < 0 ? 'delta down' : 'delta eq'}">${d == null ? '' : (d > 0 ? '+' : d < 0 ? '−' : '±') + fmtKg(Math.abs(d))}</span>
     </div></button></li>`; }).join('')}</ul>` : ''}`;
 }
@@ -956,7 +1044,7 @@ function openWeight(id) {
     const mapUrl = w.loc ? `https://maps.apple.com/?ll=${w.loc.lat},${w.loc.lng}&q=${encodeURIComponent(p.name)}` : '';
     return `<div class="stack">
       <form data-form="weight-edit" class="input-row"><input id="we-kg" class="input" inputmode="decimal" value="${fmtKg(w.kg)}" aria-label="Peso em kg"><button class="btn primary" type="submit">Salvar</button></form>
-      <dl class="dl"><dt>Data</dt><dd>${fmtDate(w.ts)} às ${fmtTime(w.ts)}</dd>
+      <dl class="dl"><dt>Data</dt><dd>${whenTxt(w)}</dd>
         <dt>Local</dt><dd>${esc(p.name)}${p.sub ? `<br><span class="muted small">${esc(p.sub)}</span>` : ''}</dd>
         ${w.loc ? `<dt>GPS</dt><dd class="num">${w.loc.lat.toFixed(5)}, ${w.loc.lng.toFixed(5)}<br><span class="muted small">precisão ± ${w.loc.acc} m</span></dd>` : ''}</dl>
       ${w.loc ? `<a class="btn" href="${mapUrl}" target="_blank" rel="noopener">${ico('map', 18)} Ver no mapa</a>
@@ -1247,11 +1335,15 @@ function viewResultados() {
   return `<header class="page-head"><h1>Resultados</h1><span class="muted small">${plural(idx.length, 'item', 'itens')}</span></header>
   ${flagged.length ? `<section class="card stack" style="gap:8px"><b>Fora da referência no último exame (${fmtDK(lastExamDate)})</b>${flagged.map(it => `<button class="linkish row between" style="width:100%" data-act="mk-open" data-key="${esc(it.key)}"><span>${esc(it.name)}: <b class="num">${esc(it.last.raw)}</b> <span class="muted small">${esc(it.last.unit || '')} · ${esc(refText(it.last))}</span></span>${statusChip(mkStatus(it.last))}</button>`).join('')}<span class="muted small">Comparação com a referência impressa no laudo. Quem interpreta é o médico.</span></section>` : ''}
   <div class="chips-scroll" role="group" aria-label="Grupos">${chips}</div>
-  ${shown.map(g => `<h2 class="sec">${esc(g.name)}</h2><div class="res-list">${g.items.map(it => `<button class="card res-card" data-act="mk-open" data-key="${esc(it.key)}">
+  ${shown.map(g => { const multi = g.items.filter(it => it.pts.length >= 2), single = g.items.filter(it => it.pts.length < 2);
+    return `<h2 class="sec">${esc(g.name)}</h2>
+    ${multi.length ? `<div class="res-list">${multi.map(it => `<button class="card res-card" data-act="mk-open" data-key="${esc(it.key)}">
       <span class="rc-top"><span class="rc-name"><b>${esc(it.name)}</b><span class="muted small">${esc(refText(it.last))}</span></span><span class="rc-val"><span><b class="num">${esc(it.last.raw)}</b> <span class="muted small">${esc(it.last.unit || '')}</span></span>${statusChip(mkStatus(it.last))}</span></span>
       ${deltaHtml(it)}
       ${miniChart(it)}
-    </button>`).join('')}</div>`).join('')}`;
+    </button>`).join('')}</div>` : ''}
+    ${single.length ? `<div class="card single-list"><div class="sl-head">Medido 1 vez · o gráfico aparece quando repetir o exame</div><ul>${single.map(it => { const r = it.rows[it.rows.length - 1];
+      return `<li><button class="row-btn" data-act="mk-open" data-key="${esc(it.key)}"><span class="rb-main"><b>${esc(it.name)}</b><span class="muted small">${fmtDK(r.date)}${refText(it.last) ? ' · ' + esc(refText(it.last)) : ''}</span></span><span class="rc-val"><span><b class="num">${esc(it.last.raw)}</b> <span class="muted small">${esc(it.last.unit || '')}</span></span>${statusChip(mkStatus(it.last))}</span></button></li>`; }).join('')}</ul></div>` : ''}`; }).join('')}`;
 }
 
 /* ---------- visualizador de PDF (laudo na íntegra) ---------- */
@@ -1860,7 +1952,8 @@ const actions = {
   'vault-pin': () => changePin(),
   'vault-off': () => disconnectVault(),
   'lock-forgot': () => showLock('forgot'),
-  'go-vault': () => { UI.tab = 'ajustes'; render(); window.scrollTo(0, 0); },
+  'go-vault': () => { closeSheet(); UI.tab = 'ajustes'; render(); window.scrollTo(0, 0); },
+  'customize': () => openCustomize(),
   'export-csv': () => exportCsv(),
   'demo-load': () => loadDemo(),
   'demo-reset': async () => {
@@ -1927,6 +2020,11 @@ document.addEventListener('input', e => {
     clearTimeout(jrTimer); jrTimer = setTimeout(save, 400);
   }
   if (t.dataset.pf) { S.profile[t.dataset.pf] = t.value; clearTimeout(pfTimer); pfTimer = setTimeout(save, 400); }
+  if (t.dataset.st) {
+    if (t.dataset.st === 'weightGoal') { const n = parseNum(t.value); S.settings.weightGoal = n >= 20 && n <= 350 ? Math.round(n * 10) / 10 : null; }
+    else S.settings[t.dataset.st] = t.value.trim();
+    clearTimeout(pfTimer); pfTimer = setTimeout(async () => { await save(); render(); }, 450);
+  }
   if (t.id === 'kg-input') { const er = $('#weigh-err'); if (er) er.hidden = true; }
 });
 document.addEventListener('change', async e => {
@@ -1935,6 +2033,8 @@ document.addEventListener('change', async e => {
   if (t.dataset.weightPlace) { const w = S.weights.find(x => x.id === t.dataset.weightPlace); if (w) { w.placeId = t.value || null; await save(); render(); } }
   if (t.dataset.pf) { await save(); if (UI.tab === 'saude') { const top = document.querySelector('.ficha-top'); if (top) { const p = S.profile; top.querySelectorAll('b')[0].textContent = p.blood || '—'; top.querySelectorAll('b')[1].textContent = p.vision || '—'; } } }
   if (t.dataset.jr) { await save(); render(); }
+  if (t.dataset.stm) { S.settings.missions[t.dataset.stm] = +t.value; await save(); render(); }
+  if (t.dataset.stb) { S.settings[t.dataset.stb] = t.checked; await save(); render(); }
   if (t.id === 'fd-files' && FD) { FD.newFiles.push(...t.files); refreshSheet(); }
   if (t.id === 'import-file' && t.files[0]) { await importBackup(t.files[0]); t.value = ''; }
 });
