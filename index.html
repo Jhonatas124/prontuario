@@ -1,0 +1,1575 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prontuário">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#EEF3F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1616" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Prontuário de Bolso</title>
+<style>
+:root{
+  --bg:#EEF3F3; --surface:#FFFFFF; --surface-2:#E2EBEB; --ink:#0F2526; --muted:#587071;
+  --line:#D5E0E0; --line-strong:#AFC2C2;
+  --accent:#1B7272; --accent-ink:#FFFFFF; --accent-soft:#D5EAE9;
+  --gold:#B87708; --gold-soft:#FBEBCF;
+  --ok:#23794E; --ok-soft:#D8EFE2; --bad:#B63A30; --bad-soft:#F6DDDA;
+  --scrim:rgba(8,24,24,.38);
+  --radius:14px; --tabbar:62px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B1616; --surface:#122222; --surface-2:#1B2F2F; --ink:#E2EDED; --muted:#8FA8A8;
+    --line:#223737; --line-strong:#3B5555;
+    --accent:#3BB2AC; --accent-ink:#032120; --accent-soft:#143A3A;
+    --gold:#F2AE45; --gold-soft:#382B14;
+    --ok:#56C58F; --ok-soft:#12342A; --bad:#F2837A; --bad-soft:#3E1D1A;
+    --scrim:rgba(0,0,0,.55);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+    --bg:#0B1616; --surface:#122222; --surface-2:#1B2F2F; --ink:#E2EDED; --muted:#8FA8A8;
+    --line:#223737; --line-strong:#3B5555;
+    --accent:#3BB2AC; --accent-ink:#032120; --accent-soft:#143A3A;
+    --gold:#F2AE45; --gold-soft:#382B14;
+    --ok:#56C58F; --ok-soft:#12342A; --bad:#F2837A; --bad-soft:#3E1D1A;
+    --scrim:rgba(0,0,0,.55);
+    color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font-family:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+body.locked{overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{touch-action:manipulation}
+[hidden]{display:none!important}
+.vh{position:absolute!important;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)} .small{font-size:13px} .center{text-align:center}
+.num{font-variant-numeric:tabular-nums}
+
+main{max-width:560px;margin:0 auto;
+  padding-top:calc(env(safe-area-inset-top, 0px) + 14px);
+  padding-bottom:calc(var(--tabbar) + env(safe-area-inset-bottom, 0px) + 28px);
+  padding-left:16px;padding-right:16px;display:flex;flex-direction:column;gap:16px}
+
+h1{font-size:28px;line-height:1.12;margin:0;font-weight:750;letter-spacing:-.015em;text-wrap:balance}
+h2{font-size:19px;line-height:1.2;margin:0;font-weight:700;text-wrap:balance}
+h2.sec{margin-top:8px}
+.eyebrow{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:46px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* buttons */
+.btn{appearance:none;border:0;font-weight:650;font-size:16px;border-radius:12px;padding:11px 16px;min-height:46px;
+  background:var(--surface-2);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;line-height:1.2}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.danger{background:var(--bad);color:#fff}
+.btn.ghost{background:transparent;color:var(--accent);padding-left:6px;padding-right:6px}
+.btn.block{width:100%}
+.btn.small{min-height:40px;padding:8px 12px;font-size:15px;border-radius:10px}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,.icon-btn:focus-visible,.row-btn:focus-visible,.task:focus-visible,.tabbar button:focus-visible,.mk-card:focus-visible,.quick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.icon-btn{appearance:none;border:0;background:transparent;color:var(--ink);width:42px;height:42px;border-radius:12px;display:grid;place-items:center;cursor:pointer;flex:none}
+.icon-btn:disabled{opacity:.3}
+.icon-btn.soft{background:var(--surface-2)}
+.icon-btn.danger{color:var(--bad)}
+
+/* surfaces */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.list>li+li{border-top:1px solid var(--line)}
+.row-btn{appearance:none;border:0;background:transparent;width:100%;text-align:left;display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer;min-height:58px}
+.rb-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.rb-main b{font-weight:650}
+.rb-side{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;flex:none}
+.empty{padding:22px 18px;text-align:center;border:1.5px dashed var(--line-strong);border-radius:var(--radius);color:var(--muted)}
+.empty b{display:block;color:var(--ink);margin-bottom:4px}
+
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;padding:3px 9px 3px 7px;border-radius:999px;background:var(--surface-2);color:var(--muted);max-width:100%;line-height:1.3}
+.chip>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip svg{flex:none}
+.k-casa{background:var(--accent-soft);color:var(--accent)}
+.k-saude{background:var(--bad-soft);color:var(--bad)}
+.k-academia{background:var(--gold-soft);color:var(--gold)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.low{background:var(--gold-soft);color:var(--gold)}
+
+/* install banner */
+.banner{display:flex;gap:12px;align-items:flex-start;background:var(--accent-soft);color:var(--ink);border-radius:var(--radius);padding:12px 8px 12px 14px;font-size:14px}
+.banner p{margin:0;flex:1}
+
+/* hoje */
+.day-head{display:flex;align-items:center;gap:6px}
+.day-title{flex:1;min-width:0;text-align:center;display:flex;flex-direction:column;gap:2px}
+.day-title h1{font-size:23px}
+.progress{display:flex;align-items:center;gap:16px}
+.ring{flex:none}
+.ring .bg{stroke:var(--surface-2)} .ring .fg{stroke:var(--accent);transition:stroke-dashoffset .35s ease}
+.ring text{fill:var(--ink);font-weight:750;font-size:17px}
+.progress .p-txt{display:flex;flex-direction:column;gap:3px}
+.progress .p-txt b{font-size:17px}
+.streak{display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:650;font-size:14px}
+.task{appearance:none;border:0;background:transparent;width:100%;text-align:left;display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:12px;padding:12px 14px;min-height:58px;cursor:pointer}
+.task .box{width:27px;height:27px;border-radius:50%;border:2px solid var(--line-strong);display:grid;place-items:center;color:transparent;transition:background .15s,border-color .15s}
+.task.on .box{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.task .tname{display:flex;flex-direction:column;gap:1px;font-weight:600;min-width:0}
+.task.on .tname>span{color:var(--muted)}
+.task .tname small{font-weight:500;color:var(--muted);font-size:12.5px}
+.dots{display:flex;gap:4px;align-items:center}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--surface-2);display:block}
+.dots i.y{background:var(--accent)}
+.dots i.cur{box-shadow:0 0 0 1.5px var(--bg),0 0 0 3px var(--line-strong)}
+.quick{appearance:none;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer;text-align:left}
+.quick .q-ico{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+.quick .q-txt{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.legend-7{display:flex;justify-content:flex-end;padding:0 14px;margin-top:-8px}
+
+/* peso */
+.hero-w{display:flex;flex-direction:column;gap:10px}
+.big-num{font-size:52px;font-weight:750;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.big-num small{font-size:22px;font-weight:650;color:var(--muted);letter-spacing:0;margin-left:4px}
+.delta{font-weight:650;font-size:15px}
+.delta.up{color:var(--bad)} .delta.down{color:var(--ok)} .delta.eq{color:var(--muted)}
+.seg{display:flex;background:var(--surface-2);border-radius:11px;padding:3px;gap:2px}
+.seg button{flex:1;appearance:none;border:0;background:transparent;border-radius:9px;padding:7px 4px;font-size:14px;font-weight:650;color:var(--muted);cursor:pointer;min-height:34px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .axis{fill:var(--muted);font-size:10.5px;font-family:inherit}
+.chart .line{fill:none;stroke:var(--accent);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
+.chart .area{fill:var(--accent);opacity:.12}
+.chart .pt{fill:var(--surface);stroke:var(--accent);stroke-width:2}
+.chart .end{fill:var(--accent);stroke:var(--surface);stroke-width:2.5}
+.chart .end-lbl{fill:var(--ink);font-size:12px;font-weight:700}
+.chart .band{fill:var(--ok);opacity:.12}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.stats div{display:flex;flex-direction:column;gap:2px}
+.stats b{font-variant-numeric:tabular-nums}
+.w-row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;width:100%}
+.w-row>span{min-width:0}
+.w-row .w-kg{font-weight:700;font-size:18px;font-variant-numeric:tabular-nums;text-align:right}
+.w-row .w-when{font-weight:600}
+.w-row .w-d{font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* exames */
+.mk-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mk-card{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:12px;text-align:left;display:flex;flex-direction:column;gap:4px;cursor:pointer;min-width:0}
+.mk-card>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mk-card b{font-size:19px;font-variant-numeric:tabular-nums}
+.mk-card b small{font-size:12px;color:var(--muted);font-weight:600}
+.mk-card .chip{align-self:flex-start}
+.spark{width:100%;height:26px;display:block}
+.spark polyline{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.res-table{width:100%;border-collapse:collapse;font-size:15px}
+.res-table td{padding:10px 4px;border-top:1px solid var(--line);vertical-align:top}
+.res-table tr:first-child td{border-top:0}
+.res-table .v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.res-table .r{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.linkish{appearance:none;border:0;background:none;padding:0;color:var(--accent);font-weight:650;text-align:left;cursor:pointer}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.thumb{appearance:none;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);aspect-ratio:1;max-width:100%;overflow:hidden;display:grid;place-items:center;cursor:pointer;padding:0;color:var(--muted);font-size:12px;gap:4px}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .pdf{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px;text-align:center;word-break:break-word}
+
+/* forms */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>span,.mk-grid label>span,.section-label{font-size:13px;color:var(--muted);font-weight:650}
+.section-label{margin-top:4px;text-transform:uppercase;letter-spacing:.07em;font-size:12px}
+.input{appearance:none;-webkit-appearance:none;width:100%;min-width:0;font-size:17px;padding:10px 12px;border-radius:11px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:46px}
+textarea.input{resize:vertical;line-height:1.35}
+.input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input[type="date"].input{display:block}
+input[type="date"]::-webkit-date-and-time-value{text-align:left}
+select.input{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
+.input-row{display:flex;gap:8px}
+.kg-field{display:flex;align-items:baseline;justify-content:center;gap:6px;padding:10px 0 4px}
+.kg-input{appearance:none;border:0;background:transparent;font-size:56px;font-weight:750;letter-spacing:-.03em;width:5.2ch;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;padding:0;border-bottom:2px solid var(--line-strong);border-radius:0}
+.kg-input:focus{outline:none;border-bottom-color:var(--accent)}
+.kg-field b{font-size:24px;color:var(--muted)}
+.meta{display:flex;flex-direction:column;gap:10px;background:var(--bg);border-radius:12px;padding:12px}
+.meta-row{display:flex;gap:10px;align-items:flex-start;font-size:15px}
+.meta-row svg{flex:none;margin-top:2px;color:var(--accent)}
+.err{color:var(--bad);font-weight:600;margin:0;font-size:14px}
+.mk{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.mk .input{background:var(--surface)}
+.mk-top{display:flex;gap:6px;align-items:center}
+.mk-grid{display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;gap:6px}
+.mk-grid label{display:flex;flex-direction:column;gap:4px;min-width:0}
+.mk-grid .input{padding:9px 8px;font-size:16px}
+.markers{display:flex;flex-direction:column;gap:10px}
+.files{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.files li{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:10px;padding:4px 4px 4px 10px;font-size:14px}
+.files li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kinds{display:flex;flex-wrap:wrap;gap:6px}
+.kinds button{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px 7px 9px;display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:14px;cursor:pointer;color:var(--muted)}
+.kinds button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.edit-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.edit-list li{display:flex;gap:4px;align-items:center}
+.dl{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;margin:0;font-size:15px}
+.dl dt{color:var(--muted)} .dl dd{margin:0;font-weight:600;min-width:0;overflow-wrap:anywhere}
+
+/* tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);
+  background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:saturate(1.5) blur(18px);backdrop-filter:saturate(1.5) blur(18px);
+  border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom, 0px))}
+.tabbar .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabbar button{appearance:none;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:650;color:var(--muted);padding:4px 0;cursor:pointer;min-height:48px;border-radius:10px}
+.tabbar button[aria-current="page"]{color:var(--accent)}
+
+/* sheet */
+#sheet-root,#confirm-root,#viewer-root{position:fixed;inset:0;z-index:40}
+#confirm-root{z-index:60} #viewer-root{z-index:70}
+.scrim{position:absolute;inset:0;background:var(--scrim);animation:fade .18s ease}
+.sheet{position:absolute;left:0;right:0;bottom:var(--kb,0px);margin:0 auto;max-width:560px;background:var(--surface);border-radius:20px 20px 0 0;
+  max-height:calc(var(--vvh,100vh) - env(safe-area-inset-top, 0px) - 18px);display:flex;flex-direction:column;animation:up .24s cubic-bezier(.2,.8,.2,1)}
+.sheet-head{display:flex;align-items:center;gap:8px;padding:14px 10px 6px 18px}
+.sheet-head h2{flex:1}
+.sheet-body{overflow:auto;-webkit-overflow-scrolling:touch;padding:8px 16px calc(20px + env(safe-area-inset-bottom, 0px));overscroll-behavior:contain}
+.confirm{position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);max-width:380px;margin:0 auto;background:var(--surface);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.confirm p{margin:0;font-size:16px}
+.confirm .row>*{flex:1}
+.viewer{position:absolute;inset:0;display:grid;place-items:center;padding:calc(env(safe-area-inset-top,0px) + 50px) 12px calc(env(safe-area-inset-bottom,0px) + 20px);background:rgba(0,0,0,.92)}
+.viewer img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+.viewer .icon-btn{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;color:#fff;background:rgba(255,255,255,.14)}
+#toast{position:fixed;left:50%;bottom:calc(var(--tabbar) + env(safe-area-inset-bottom, 0px) + 14px);transform:translateX(-50%);z-index:80;background:var(--ink);color:var(--bg);font-weight:650;font-size:15px;padding:10px 16px;border-radius:12px;max-width:calc(100% - 32px);text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:370px){.mk-grid{grid-template-columns:1fr 1fr}.big-num{font-size:44px}.dots i{width:6px;height:6px}}
+
+/* v2: gamificação, saúde, diário */
+.row.between{justify-content:space-between}
+.lvl-card{appearance:none;width:100%;text-align:left;cursor:pointer;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;color:inherit}
+.lvl-main{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lvl-main .l-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.lvl-main .l-top b{font-size:16px}
+.lvl-name{color:var(--gold);font-weight:750}
+.bar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--accent),var(--gold))}
+.l-stats{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--muted)}
+.l-stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+.energy{display:grid;grid-template-columns:repeat(11,1fr);gap:4px}
+.energy button{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:9px;min-height:40px;font-weight:700;font-size:15px;color:var(--muted);padding:0;cursor:pointer;font-variant-numeric:tabular-nums}
+.energy button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.energy-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.xp-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--gold);background:var(--gold-soft);border-radius:999px;padding:2px 8px}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.badge{border:1px solid var(--line);border-radius:14px;padding:12px 6px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:5px;background:var(--surface);min-width:0}
+.badge .b-ico{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);color:var(--muted)}
+.badge.got .b-ico{background:var(--gold-soft);color:var(--gold)}
+.badge:not(.got){opacity:.6}
+.badge b{font-size:13px;line-height:1.2}
+.badge span{font-size:11.5px;color:var(--muted);line-height:1.25}
+.missions{display:flex;flex-direction:column;gap:14px}
+.mission{display:flex;flex-direction:column;gap:6px}
+.mission .m-top{display:flex;justify-content:space-between;gap:8px;font-size:15px}
+.mission.done .bar i{background:var(--ok)}
+.insights{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.insights li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:baseline;font-size:15px}
+.insights li b{font-variant-numeric:tabular-nums}
+.big-level{display:flex;align-items:center;gap:16px}
+.big-level .lv{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;font-size:28px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--accent),var(--gold));flex:none}
+.tabs-sub{margin-top:-4px}
+.fx{display:flex;flex-direction:column;gap:12px}
+.ficha-top{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ficha-top .card{padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.ficha-top b{font-size:20px}
+.tabbar .in{grid-template-columns:repeat(5,1fr)}
+.tabbar button{font-size:10.5px}
+.chips-scroll{display:flex;gap:6px;overflow-x:auto;margin:0 -16px;padding:2px 16px 4px;scrollbar-width:none}
+.chips-scroll::-webkit-scrollbar{display:none}
+.chips-scroll button{appearance:none;flex:none;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:7px 13px;font-weight:650;font-size:14px;cursor:pointer;white-space:nowrap}
+.chips-scroll button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.res-list{display:flex;flex-direction:column;gap:10px}
+.res-card{appearance:none;width:100%;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:6px;color:inherit;padding:14px 14px 8px}
+.rc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.rc-name{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rc-val{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none;text-align:right}
+.rc-val b{font-size:20px}
+.rc-delta{font-size:13px;font-weight:650}
+.rc-delta.good{color:var(--ok)} .rc-delta.bad{color:var(--bad)} .rc-delta.muted{color:var(--muted);font-weight:500}
+.pdfv{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column}
+.pdfv-bar{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px;background:var(--surface);border-bottom:1px solid var(--line)}
+.pdfv-name{flex:1;min-width:0;font-weight:650;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdfv-pages{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:8px 8px calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;gap:8px;align-items:center}
+.pdfv-pages canvas{width:100%;max-width:900px;height:auto;background:#fff;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.pdfv-frame{width:100%;flex:1;min-height:70vh;border:0;background:#fff}
+</style>
+</head>
+<body>
+<main id="view" aria-live="polite"></main>
+<nav class="tabbar" aria-label="Seções"><div class="in">
+  <button data-act="tab" data-tab="hoje" aria-current="page"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6.2l1.6 1.6 2.9-3M3.5 12.2l1.6 1.6 2.9-3M3.5 18.2l1.6 1.6 2.9-3"/></svg>Hoje</button>
+  <button data-act="tab" data-tab="peso"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7.5 10a6.4 6.4 0 0 1 9 0"/><path d="M12 11l1.8-2.6"/></svg>Peso</button>
+  <button data-act="tab" data-tab="resultados"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 20.5h17"/><path d="M5 16l4.5-5 3.5 3 6-7"/><circle cx="19" cy="7" r="1.6"/></svg>Resultados</button>
+  <button data-act="tab" data-tab="saude"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12.5h4l2.2-5.5 4.3 11 2.3-5.5h6.2"/></svg>Saúde</button>
+  <button data-act="tab" data-tab="ajustes"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Ajustes</button>
+</div></nav>
+<div id="sheet-root" hidden></div>
+<div id="confirm-root" hidden></div>
+<div id="viewer-root" hidden></div>
+<div id="toast" role="status" hidden></div>
+
+<script>
+'use strict';
+const APP_ID = 'prontuario-de-bolso';
+const APP_VERSION = '2.0';
+const PREVIEW = !!window.PREVIEW_MODE;
+
+/* ---------- utils ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const pad = n => String(n).padStart(2, '0');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const dayKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseDay = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (k, n) => { const d = parseDay(k); d.setDate(d.getDate() + n); return dayKey(d); };
+const weekStart = k => { const d = parseDay(k); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return dayKey(d); };
+const daysBetween = (a, b) => Math.round((parseDay(b) - parseDay(a)) / 864e5);
+const fmtKg = n => Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmtNum = (n, max = 2) => Number(n).toLocaleString('pt-BR', { maximumFractionDigits: max });
+const fmtTime = d => new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+const fmtDate = d => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const fmtShort = d => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+const fmtDK = k => fmtDate(parseDay(k));
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const fmtDayLong = k => cap(parseDay(k).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }));
+const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+function parseNum(s) {
+  if (s == null) return NaN;
+  let t = String(s).trim().replace(/\s/g, '');
+  if (!t) return NaN;
+  if (t.includes(',') && t.includes('.')) t = t.replace(/\./g, '').replace(',', '.');
+  else if (t.includes(',')) t = t.replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+  return /^[-+]?\d*\.?\d+$/.test(t) ? Number(t) : NaN;
+}
+function relDay(iso) {
+  const k = dayKey(new Date(iso)), t = dayKey();
+  if (k === t) return 'hoje às ' + fmtTime(iso);
+  if (k === addDays(t, -1)) return 'ontem';
+  return `há ${daysBetween(k, t)} dias`;
+}
+function distM(a, b) {
+  const R = 6371000, r = x => x * Math.PI / 180;
+  const dLat = r(b.lat - a.lat), dLng = r(b.lng - a.lng);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+/* ---------- icons ---------- */
+const P = {
+  casa: '<path d="M3.5 11L12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
+  saude: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/>',
+  academia: '<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
+  trabalho: '<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/>',
+  outro: '<path d="M12 21s-6.5-5.8-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.2 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.3"/>',
+  semloc: '<path d="M12 21s-6.5-5.8-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.2 12 21 12 21z"/><path d="M4 4l16 16"/>',
+  locate: '<circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22"/>',
+  cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  prev: '<path d="M15 5l-7 7 7 7"/>', next: '<path d="M9 5l7 7-7 7"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+  up: '<path d="M12 19V5M6 11l6-6 6 6"/>', down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+  trash: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+  map: '<path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>',
+  share: '<path d="M12 3v12M7.5 7.5L12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  flame: '<path d="M12 21c-3.9 0-6.5-2.6-6.5-6.2 0-3.4 2.6-5.4 3.6-8.3.3 2 1.4 3.2 2.5 3.8.2-2.8 1.6-5.2 3.9-6.8-.4 3.3 3 5.6 3 10 0 4.3-2.8 7.5-6.5 7.5z"/>',
+  peso: '<rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7.5 10a6.4 6.4 0 0 1 9 0"/><path d="M12 11l1.8-2.6"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H4.5a3 3 0 0 0 3.5 4M16 6h3.5a3 3 0 0 1-3.5 4"/><path d="M12 13v4M8.5 20.5h7M9.5 17h5v3.5h-5z"/>',
+  star: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/>',
+  bolt: '<path d="M13 2.5L5 13.5h6l-1 8 8-11h-6z"/>',
+  drop: '<path d="M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11z"/>',
+  eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  steth: '<path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 12v2a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="10" r="2"/>',
+  scale: '<path d="M12 4v16M5 20h14"/><path d="M5 8h14M7.5 8l-3 6a3 3 0 0 0 6 0zM16.5 8l-3 6a3 3 0 0 0 6 0z"/>',
+  shield: '<path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.2-7.5 9.5-4.3-1.3-7.5-4.9-7.5-9.5V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>',
+  book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>',
+  refresh: '<path d="M20 11a8 8 0 0 0-14.5-4.6L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.5 4.6L20 16"/><path d="M20 20.5V16h-4.5"/>',
+  note: '<path d="M5 3.5h10l4 4v13H5z"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/>'
+};
+const ico = (n, s = 18, sw = 1.9) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || P.outro}</svg>`;
+const KINDS = [['casa', 'Casa'], ['saude', 'Saúde'], ['academia', 'Academia'], ['trabalho', 'Trabalho'], ['outro', 'Outro']];
+
+/* ---------- presets ---------- */
+const PRESETS = [
+  ['Hemácias', 'milhões/mm³'], ['Hemoglobina', 'g/dL'], ['Hematócrito', '%'], ['VCM', 'fL'], ['HCM', 'pg'], ['CHCM', '%'], ['RDW', '%'],
+  ['Leucócitos', '/mm³'], ['Segmentados (%)', '%'], ['Eosinófilos (%)', '%'], ['Basófilos (%)', '%'], ['Linfócitos (%)', '%'], ['Monócitos (%)', '%'], ['Plaquetas', '/mm³'],
+  ['Glicose em jejum', 'mg/dL'], ['Hemoglobina glicada (HbA1c)', '%'], ['Insulina', 'µUI/mL'],
+  ['Colesterol total', 'mg/dL'], ['HDL', 'mg/dL'], ['LDL', 'mg/dL'], ['VLDL', 'mg/dL'], ['Triglicerídeos', 'mg/dL'],
+  ['TGO (AST)', 'U/L'], ['TGP (ALT)', 'U/L'], ['Gama GT', 'U/L'],
+  ['Creatinina', 'mg/dL'], ['Ureia', 'mg/dL'], ['Ácido úrico', 'mg/dL'], ['Magnésio', 'mg/dL'], ['Cálcio', 'mg/dL'],
+  ['TSH', 'µUI/mL'], ['T4 livre', 'ng/dL'],
+  ['Vitamina D (25-OH)', 'ng/mL'], ['Vitamina B12', 'pg/mL'], ['Ferritina', 'ng/mL'], ['Ferro sérico', 'µg/dL'],
+  ['PCR (proteína C reativa)', 'mg/L'], ['Testosterona total', 'ng/dL'], ['Sódio', 'mEq/L'], ['Potássio', 'mEq/L']
+];
+const presetUnit = name => { const p = PRESETS.find(x => x[0].toLowerCase() === String(name).trim().toLowerCase()); return p ? p[1] : null; };
+const TRIGGERS = ['tédio', 'cansaço', 'sozinho', 'estresse', 'tela', 'madrugada', 'outro'];
+
+/* hábitos padrão (genéricos; a lista pessoal entra pelo backup) */
+const DEFAULT_TASKS = [
+  { key: 'acordar', name: 'Acordar até 6h' }, { key: 'sol', name: 'Pegar sol pela manhã' }, { key: 'frutas', name: 'Comer 2 frutas' },
+  { key: 'agua', name: 'Beber 2 L de água' }, { key: 'movimento', name: 'Exercício ou caminhada' }, { key: 'ler', name: 'Ler 2 páginas' },
+  { key: 'dormir', name: 'Dormir até 23h' }
+];
+
+/* ---------- storage (IndexedDB, fallback localStorage) ---------- */
+const Store = {
+  db: null,
+  open() {
+    if (this.db) return Promise.resolve(this.db);
+    return new Promise((res, rej) => {
+      if (!('indexedDB' in window)) return rej(new Error('no idb'));
+      const r = indexedDB.open('prontuario', 1);
+      r.onupgradeneeded = () => { const db = r.result; ['kv', 'files'].forEach(n => { if (!db.objectStoreNames.contains(n)) db.createObjectStore(n); }); };
+      r.onsuccess = () => { this.db = r.result; res(this.db); };
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async run(store, mode, fn) {
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const t = db.transaction(store, mode); const req = fn(t.objectStore(store)); let out;
+      if (req) req.onsuccess = () => { out = req.result; };
+      t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    });
+  },
+  get(s, k) { return this.run(s, 'readonly', o => o.get(k)); },
+  put(s, k, v) { return this.run(s, 'readwrite', o => o.put(v, k)); },
+  del(s, k) { return this.run(s, 'readwrite', o => o.delete(k)); },
+  keys(s) { return this.run(s, 'readonly', o => o.getAllKeys()); },
+  clear(s) { return this.run(s, 'readwrite', o => o.clear()); }
+};
+
+let S = null;
+function freshState() {
+  return { v: 2, created: new Date().toISOString(), tasks: DEFAULT_TASKS.map(t => ({ id: uid(), key: t.key, name: t.name, active: true })),
+    checks: {}, journal: {}, weights: [], exams: [], consults: [], places: [],
+    profile: { blood: '', vision: '', allergies: '', meds: '', conditions: '', emergency: '' },
+    meta: { lastBackup: null, backupLog: [], hideInstall: false, start: dayKey() } };
+}
+function migrate() {
+  S.tasks ||= []; S.checks ||= {}; S.journal ||= {}; S.weights ||= []; S.exams ||= []; S.consults ||= []; S.places ||= [];
+  S.profile = { blood: '', vision: '', allergies: '', meds: '', conditions: '', emergency: '', ...(S.profile || {}) };
+  S.meta = { backupLog: [], hideInstall: false, ...(S.meta || {}) };
+  if (!S.meta.start) { const ks = Object.keys(S.checks).sort(); S.meta.start = ks[0] || dayKey(); }
+  for (const w of S.weights) if (w.locStatus === 'pending') { w.locStatus = w.loc ? 'ok' : 'none'; if (!w.loc) w.locError = 'O app fechou antes de pegar a localização.'; }
+  S.v = 2;
+}
+async function load() {
+  try { S = await Store.get('kv', 'state'); } catch (e) { try { S = JSON.parse(localStorage.getItem('prontuario-state')); } catch (_) {} }
+  if (!S) { S = freshState(); await save(); }
+  migrate();
+}
+async function save() {
+  try { await Store.put('kv', 'state', S); }
+  catch (e) { try { localStorage.setItem('prontuario-state', JSON.stringify(S)); } catch (_) { toast('Não consegui salvar neste aparelho. Exporte um backup.'); } }
+}
+
+/* ---------- geolocation ---------- */
+function getPosition(timeout = 15000) {
+  return new Promise((res, rej) => {
+    if (!window.isSecureContext) return rej({ code: 'insecure' });
+    if (!('geolocation' in navigator)) return rej({ code: 'unsupported' });
+    navigator.geolocation.getCurrentPosition(
+      p => res({ lat: p.coords.latitude, lng: p.coords.longitude, acc: Math.round(p.coords.accuracy) }),
+      e => rej(e), { enableHighAccuracy: true, timeout, maximumAge: 20000 });
+  });
+}
+function geoErrMsg(e) {
+  if (PREVIEW) return 'Na prévia o GPS fica bloqueado. No app publicado ele funciona.';
+  const c = e && e.code;
+  if (c === 1) return 'Localização bloqueada. No iPhone: Ajustes › Privacidade › Serviços de Localização › Sites do Safari › "Ao Usar".';
+  if (c === 2) return 'Não deu pra achar sua posição agora.';
+  if (c === 3) return 'Demorou demais pra achar o GPS.';
+  if (c === 'insecure') return 'A localização só funciona com o app aberto por https.';
+  if (c === 'unsupported') return 'Este aparelho não oferece localização.';
+  return 'Não consegui pegar a localização.';
+}
+function matchPlace(loc) {
+  let best = null, bd = Infinity;
+  for (const p of S.places) { const d = distM(loc, p), slack = Math.min(loc.acc || 0, 75); if (d <= p.radius + slack && d < bd) { best = p; bd = d; } }
+  return best;
+}
+const HEALTH = ['hospital', 'clinic', 'doctors', 'pharmacy', 'dentist', 'laboratory', 'health'];
+async function reverseGeocode({ lat, lng }) {
+  if (!navigator.onLine) throw new Error('offline');
+  const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), 7000);
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat.toFixed(6)}&lon=${lng.toFixed(6)}&zoom=18&addressdetails=1&accept-language=pt-BR`, { signal: ctrl.signal });
+    if (!r.ok) throw new Error('http ' + r.status);
+    const j = await r.json(); const a = j.address || {};
+    const town = a.city || a.town || a.village || a.municipality || '';
+    const street = [a.road, a.house_number].filter(Boolean).join(', ');
+    const area = a.suburb || a.neighbourhood || a.quarter || '';
+    const address = [street, area, town].filter(Boolean).join(' · ');
+    let kind = null;
+    if (HEALTH.includes(j.type) || j.category === 'healthcare' || HEALTH.includes(a.amenity)) kind = 'saude';
+    else if (['fitness_centre', 'sports_centre', 'gym'].includes(j.type)) kind = 'academia';
+    return { label: j.name || street || area || town || null, address: address || null, kind };
+  } finally { clearTimeout(tm); }
+}
+function startLocating(t) {
+  t.status = 'locating';
+  t.promise = getPosition().then(async loc => {
+    t.loc = loc; t.status = 'located';
+    const p = matchPlace(loc);
+    if (p) { t.placeId = p.id; t.status = 'ok'; t.onUpdate && t.onUpdate(); return t; }
+    t.onUpdate && t.onUpdate();
+    try { const g = await reverseGeocode(loc); t.label = g.label; t.address = g.address; t.kind = g.kind; } catch (_) {}
+    t.status = 'ok'; t.onUpdate && t.onUpdate(); return t;
+  }, err => { t.status = 'error'; t.error = geoErrMsg(err); t.onUpdate && t.onUpdate(); throw err; });
+  t.promise.catch(() => {});
+  return t;
+}
+function placeOf(e) {
+  if (e.locStatus === 'pending' && !e.loc) return { name: 'Localizando…', kind: 'locate', sub: '' };
+  const p = e.placeId && S.places.find(x => x.id === e.placeId);
+  if (p) return { name: p.name, kind: p.kind, sub: e.address || '' };
+  if (e.label) {
+    let sub = e.address && e.address !== e.label ? e.address : '';
+    if (sub.startsWith(e.label)) sub = sub.slice(e.label.length).replace(/^\s*·\s*/, '');
+    return { name: e.label, kind: e.kind || 'outro', sub };
+  }
+  if (e.address) return { name: e.address, kind: 'outro', sub: '' };
+  if (e.loc) return { name: `${e.loc.lat.toFixed(5)}, ${e.loc.lng.toFixed(5)}`, kind: 'outro', sub: '' };
+  return { name: 'Sem localização', kind: 'semloc', sub: e.locError || '' };
+}
+const placeChip = e => { const p = placeOf(e); return `<span class="chip k-${p.kind}">${ico(p.kind, 14, 2)}<span>${esc(p.name)}</span></span>`; };
+async function resolveMissingLabels() {
+  if (!navigator.onLine) return;
+  const todo = S.weights.filter(w => w.loc && !w.placeId && !w.label && !w.address && (w.geoTries || 0) < 3);
+  let changed = false;
+  for (const w of todo) {
+    const p = matchPlace(w.loc);
+    if (p) { w.placeId = p.id; changed = true; continue; }
+    w.geoTries = (w.geoTries || 0) + 1; changed = true;
+    try { const g = await reverseGeocode(w.loc); Object.assign(w, { label: g.label, address: g.address, kind: g.kind }); } catch (_) {}
+    await sleep(1100);
+  }
+  if (changed) { await save(); render(); }
+}
+
+/* ---------- UI helpers ---------- */
+const UI = { tab: 'hoje', sub: 'exames', cat: 'todos', day: dayKey(), range: '90' };
+let sheetRender = null, sheetCleanup = null;
+function toast(msg, ms = 2600) {
+  const t = $('#toast'); t.innerHTML = msg; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, ms);
+}
+function openSheet(title, renderFn, onOpen) {
+  closeSheet();
+  sheetRender = renderFn;
+  const root = $('#sheet-root');
+  root.innerHTML = `<div class="scrim" data-act="close-sheet"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="sheet-head"><h2>${esc(title)}</h2><button class="icon-btn soft" data-act="close-sheet" aria-label="Fechar">${ico('close', 18, 2.2)}</button></div><div class="sheet-body">${renderFn()}</div></div>`;
+  root.hidden = false; document.body.classList.add('locked');
+  onOpen && onOpen(root);
+}
+function refreshSheet() { const b = $('#sheet-root .sheet-body'); if (b && sheetRender) b.innerHTML = sheetRender(); }
+function closeSheet() {
+  const root = $('#sheet-root'); if (root.hidden) return;
+  root.hidden = true; root.innerHTML = ''; sheetRender = null; document.body.classList.remove('locked');
+  if (sheetCleanup) { const f = sheetCleanup; sheetCleanup = null; f(); }
+}
+function askConfirm(msg, okLabel = 'Confirmar', danger = true) {
+  return new Promise(res => {
+    const root = $('#confirm-root');
+    root.innerHTML = `<div class="scrim"></div><div class="confirm" role="alertdialog" aria-modal="true"><p>${esc(msg)}</p><div class="row"><button class="btn" id="cf-no">Cancelar</button><button class="btn ${danger ? 'danger' : 'primary'}" id="cf-yes">${esc(okLabel)}</button></div></div>`;
+    root.hidden = false;
+    const done = v => { root.hidden = true; root.innerHTML = ''; res(v); };
+    $('#cf-no').onclick = () => done(false); $('#cf-yes').onclick = () => done(true); root.querySelector('.scrim').onclick = () => done(false);
+    $('#cf-yes').focus();
+  });
+}
+function syncViewport() {
+  const vv = window.visualViewport; if (!vv) return;
+  const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  document.documentElement.style.setProperty('--kb', kb + 'px');
+  document.documentElement.style.setProperty('--vvh', vv.height + 'px');
+}
+
+/* ---------- chart ---------- */
+function niceStep(range, count) {
+  const raw = range / count, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+}
+function lineChart(pts, { refMin = null, refMax = null, h = 190, dec = 1, area = true } = {}) {
+  if (pts.length < 2) return `<p class="muted small">Com 2 registros ou mais aparece o gráfico aqui.</p>`;
+  const W = 360, H = h, L = 38, R = 48, T = 16, B = 24;
+  const ys = pts.map(p => p.v);
+  let lo = Math.min(...ys), hi = Math.max(...ys);
+  if (refMin != null && refMin < lo && lo - refMin < (hi - lo || 1) * 2) lo = refMin;
+  if (refMax != null && refMax > hi && refMax - hi < (hi - lo || 1) * 2) hi = refMax;
+  if (hi - lo < 1e-9) { lo -= Math.max(1, Math.abs(lo) * 0.02); hi += Math.max(1, Math.abs(hi) * 0.02); }
+  const step = niceStep(hi - lo, 4);
+  lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+  const tdec = step < 0.1 ? 2 : step < 1 ? 1 : 0;
+  const t0 = pts[0].t, t1 = pts[pts.length - 1].t;
+  const sx = t => L + (t1 === t0 ? 0.5 : (t - t0) / (t1 - t0)) * (W - L - R);
+  const sy = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  let g = '';
+  if (refMin != null || refMax != null) {
+    const a = sy(Math.min(hi, refMax != null ? refMax : hi)), b = sy(Math.max(lo, refMin != null ? refMin : lo));
+    if (b > a) g += `<rect class="band" x="${L}" y="${a.toFixed(1)}" width="${W - L - R}" height="${(b - a).toFixed(1)}"/>`;
+  }
+  for (let v = lo; v <= hi + step / 2; v += step) {
+    const y = sy(v).toFixed(1);
+    g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text class="axis" x="${L - 6}" y="${(+y + 3.5).toFixed(1)}" text-anchor="end">${fmtNum(v, tdec)}</text>`;
+  }
+  const spanDays = (t1 - t0) / 864e5;
+  const xl = t => spanDays > 330 ? new Date(t).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('. de ', '/').replace(' de ', '/') : fmtShort(t);
+  g += `<text class="axis" x="${L}" y="${H - 6}" text-anchor="start">${xl(t0)}</text><text class="axis" x="${W - R}" y="${H - 6}" text-anchor="end">${xl(t1)}</text>`;
+  if (spanDays > 6) g += `<text class="axis" x="${((L + W - R) / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${xl((t0 + t1) / 2)}</text>`;
+  const xy = pts.map(p => [sx(p.t), sy(p.v)]);
+  const d = xy.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('');
+  if (area) g += `<path class="area" d="${d}L${xy[xy.length - 1][0].toFixed(1)} ${H - B}L${xy[0][0].toFixed(1)} ${H - B}Z"/>`;
+  g += `<path class="line" d="${d}"/>`;
+  if (pts.length <= 45) g += xy.slice(0, -1).map(p => `<circle class="pt" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3"/>`).join('');
+  const e = xy[xy.length - 1];
+  g += `<circle class="end" cx="${e[0].toFixed(1)}" cy="${e[1].toFixed(1)}" r="5"/><text class="end-lbl" x="${(e[0] + 9).toFixed(1)}" y="${(e[1] + 4).toFixed(1)}" text-anchor="start">${fmtNum(pts[pts.length - 1].v, dec)}</text>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico de evolução">${g}</svg>`;
+}
+function spark(pts) {
+  if (pts.length < 2) return '<svg class="spark" viewBox="0 0 100 26" aria-hidden="true"></svg>';
+  const ys = pts.map(p => p.v), lo = Math.min(...ys), hi = Math.max(...ys), t0 = pts[0].t, t1 = pts[pts.length - 1].t;
+  const s = pts.map(p => `${((p.t - t0) / ((t1 - t0) || 1) * 96 + 2).toFixed(1)},${(hi === lo ? 13 : 23 - (p.v - lo) / (hi - lo) * 20).toFixed(1)}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true"><polyline points="${s}" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
+/* ---------- hábitos + gamificação ---------- */
+const activeTasks = () => S.tasks.filter(t => t.active);
+const taskByKey = k => S.tasks.find(t => t.active && t.key === k);
+function dayComplete(k) { const ts = activeTasks(); if (!ts.length) return false; const c = S.checks[k] || {}; return ts.every(t => c[t.id]); }
+function streakFull() { let k = dayKey(); if (!dayComplete(k)) k = addDays(k, -1); let n = 0; while (n < 3650 && dayComplete(k)) { n++; k = addDays(k, -1); } return n; }
+const isDone = (k, id) => !!(S.checks[k] || {})[id];
+function habitStreak(id, end = dayKey()) { let k = end; if (!isDone(k, id)) k = addDays(k, -1); let n = 0; while (n < 3650 && isDone(k, id)) { n++; k = addDays(k, -1); } return n; }
+function trackStart() { const ks = Object.keys(S.checks).sort(); const s = S.meta.start || dayKey(); return ks[0] && ks[0] < s ? ks[0] : s; }
+function allDays() { const out = [], t = dayKey(); let k = trackStart(); let guard = 0; while (k <= t && guard++ < 4000) { out.push(k); k = addDays(k, 1); } return out; }
+function bestRun(pred, days) { let cur = 0, best = 0; for (const d of days) { if (pred(d)) { cur++; if (cur > best) best = cur; } else cur = 0; } return best; }
+
+const LEVEL_NAMES = ['Iniciante', 'Aquecendo', 'No ritmo', 'Constante', 'Disciplinado', 'Em forma', 'Blindado', 'Imparável', 'Referência', 'Lenda'];
+const levelNeed = n => 300 * n;
+function levelOf(xp) {
+  let lvl = 1, base = 0;
+  while (xp >= base + levelNeed(lvl)) { base += levelNeed(lvl); lvl++; }
+  return { lvl, base, next: base + levelNeed(lvl), name: LEVEL_NAMES[Math.min(lvl, LEVEL_NAMES.length) - 1] };
+}
+const XP = { check: 10, full: 25, weight: 15, energy: 5, exam: 40, consult: 30, backup: 20, recover: 20, mission: 50 };
+function missionsFor(ws) {
+  const days = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  const full = days.filter(dayComplete).length;
+  const wDays = new Set(S.weights.map(w => dayKey(new Date(w.ts))).filter(d => d >= ws && d <= days[6])).size;
+  const eDays = days.filter(d => S.journal[d] && S.journal[d].energy != null).length;
+  return [
+    { id: 'm-full', name: 'Feche 4 dias completos', got: Math.min(full, 4), goal: 4, icon: 'check' },
+    { id: 'm-weight', name: 'Pese 2 vezes', got: Math.min(wDays, 2), goal: 2, icon: 'scale' },
+    { id: 'm-energy', name: 'Registre a energia em 5 dias', got: Math.min(eDays, 5), goal: 5, icon: 'bolt' }
+  ];
+}
+function computeGame() {
+  const today = dayKey(), days = allDays();
+  let xp = 0; const log = { checks: 0, fullDays: 0, weightDays: 0, energyDays: 0, backups: 0, recover: 0, missions: 0 };
+  for (const d of Object.keys(S.checks)) { const n = Object.keys(S.checks[d]).length; log.checks += n; xp += XP.check * n; if (dayComplete(d)) { log.fullDays++; xp += XP.full; } }
+  const wDays = new Set(S.weights.map(w => dayKey(new Date(w.ts)))); log.weightDays = wDays.size; xp += XP.weight * wDays.size;
+  log.energyDays = Object.values(S.journal).filter(j => j && j.energy != null).length; xp += XP.energy * log.energyDays;
+  xp += XP.exam * S.exams.length + XP.consult * S.consults.length;
+  const bWeeks = new Set((S.meta.backupLog || []).map(iso => weekStart(dayKey(new Date(iso))))); log.backups = bWeeks.size; xp += XP.backup * bWeeks.size;
+  // NoFap (ou o hábito-âncora): dias limpos, recorde e "nunca duas seguidas"
+  const anchor = taskByKey('nofap');
+  let clean = 0, cleanBest = 0;
+  if (anchor) {
+    let prevMiss = false;
+    for (const d of days) {
+      if (isDone(d, anchor.id)) { clean++; cleanBest = Math.max(cleanBest, clean); if (prevMiss) { log.recover++; xp += XP.recover; } prevMiss = false; }
+      else if (d < today) { clean = 0; prevMiss = true; }
+    }
+  }
+  // missões semanais (inclusive semanas passadas)
+  if (days.length) { let ws = weekStart(days[0]); const cw = weekStart(today); let guard = 0;
+    while (ws <= cw && guard++ < 600) { for (const m of missionsFor(ws)) if (m.got >= m.goal) { log.missions++; xp += XP.mission; } ws = addDays(ws, 7); } }
+  const lv = levelOf(xp);
+  const bestFull = bestRun(dayComplete, days);
+  const best = key => { const t = taskByKey(key); return t ? bestRun(d => isDone(d, t.id), days) : 0; };
+  const weekSet = new Set([...wDays].map(weekStart)); let wkRun = 0, wkBest = 0; if (weekSet.size) { let ws = weekStart([...wDays].sort()[0]); const cw = weekStart(today); while (ws <= cw) { if (weekSet.has(ws)) { wkRun++; wkBest = Math.max(wkBest, wkRun); } else wkRun = 0; ws = addDays(ws, 7); } }
+  const lastBlood = S.exams.filter(e => e.markers && e.markers.some(m => m.num != null)).map(e => e.date).sort().pop();
+  const badges = [
+    { id: 'primeiro-passo', icon: 'check', name: 'Primeiro passo', desc: 'Marcou o primeiro hábito', got: log.checks >= 1 },
+    { id: 'dia-completo', icon: 'star', name: 'Dia completo', desc: 'Fechou todos os hábitos de um dia', got: log.fullDays >= 1 },
+    { id: 'semana-perfeita', icon: 'flame', name: 'Semana perfeita', desc: '7 dias completos seguidos', got: bestFull >= 7, prog: `${Math.min(bestFull, 7)}/7` },
+    { id: 'modo-foco', icon: 'trophy', name: 'Modo Foco 30', desc: '30 dias completos (não precisa ser seguido)', got: log.fullDays >= 30, prog: `${Math.min(log.fullDays, 30)}/30` },
+    anchor && { id: 'nunca-duas', icon: 'refresh', name: 'Nunca duas seguidas', desc: 'Escorregou e voltou no dia seguinte', got: log.recover >= 1 },
+    anchor && { id: 'limpo-7', icon: 'shield', name: '7 dias limpo', desc: `7 dias seguidos de ${anchor.name}`, got: cleanBest >= 7, prog: `${Math.min(clean, 7)}/7` },
+    anchor && { id: 'limpo-30', icon: 'shield', name: '30 dias limpo', desc: `30 dias seguidos de ${anchor.name}`, got: cleanBest >= 30, prog: `${Math.min(clean, 30)}/30` },
+    anchor && { id: 'limpo-90', icon: 'shield', name: '90 dias limpo', desc: `90 dias seguidos de ${anchor.name}`, got: cleanBest >= 90, prog: `${Math.min(clean, 90)}/90` },
+    taskByKey('acordar') && { id: 'madrugador', icon: 'sun', name: 'Madrugador', desc: '7 dias seguidos acordando no horário', got: best('acordar') >= 7 },
+    taskByKey('banho') && { id: 'sangue-frio', icon: 'drop', name: 'Sangue frio', desc: '7 dias seguidos de banho gelado', got: best('banho') >= 7 },
+    taskByKey('ler') && { id: 'leitor', icon: 'book', name: 'Leitor', desc: '21 dias seguidos de leitura', got: best('ler') >= 21 },
+    { id: 'balanca-fiel', icon: 'scale', name: 'Balança fiel', desc: 'Pesou em 4 semanas seguidas', got: wkBest >= 4, prog: `${Math.min(wkBest, 4)}/4` },
+    { id: 'diario-14', icon: 'bolt', name: 'Diário de 14 dias', desc: 'Registrou a energia em 14 dias', got: log.energyDays >= 14, prog: `${Math.min(log.energyDays, 14)}/14` },
+    { id: 'exames-em-dia', icon: 'saude', name: 'Exames em dia', desc: 'Exame de sangue nos últimos 6 meses', got: !!lastBlood && daysBetween(lastBlood, today) <= 183 },
+    { id: 'ficha', icon: 'note', name: 'Ficha completa', desc: 'Tipo sanguíneo, exame e consulta no app', got: !!S.profile.blood && S.exams.length > 0 && S.consults.length > 0 },
+    { id: 'guardiao', icon: 'share', name: 'Guardião', desc: 'Fez um backup', got: log.backups >= 1 },
+    { id: 'nivel-5', icon: 'trophy', name: 'Disciplinado', desc: 'Chegou ao nível 5', got: lv.lvl >= 5 }
+  ].filter(Boolean);
+  return { xp, lv, log, clean, cleanBest, anchor, full: streakFull(), bestFull, badges, missions: missionsFor(weekStart(today)) };
+}
+function energyInsights() {
+  const keys = [['banho', 'Banho gelado'], ['sol', 'Sol pela manhã'], ['cama', 'Cama só à noite'], ['nofap', 'NoFap'], ['movimento', 'Movimento'], ['acordar', 'Acordou cedo'], ['dormir', 'Dormiu cedo']];
+  const out = [];
+  for (const [k, label] of keys) {
+    const t = taskByKey(k); if (!t) continue;
+    const yes = [], no = [];
+    for (const [d, j] of Object.entries(S.journal)) { if (!j || j.energy == null) continue; (isDone(d, t.id) ? yes : no).push(j.energy); }
+    if (yes.length >= 3 && no.length >= 3) { const avg = a => a.reduce((s, x) => s + x, 0) / a.length; out.push({ label: t.name, yes: avg(yes), no: avg(no) }); }
+  }
+  return out.sort((a, b) => (b.yes - b.no) - (a.yes - a.no));
+}
+
+/* ---------- views ---------- */
+const weightsDesc = () => [...S.weights].sort((a, b) => b.ts.localeCompare(a.ts));
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+function nextReturn() {
+  const t = dayKey();
+  return S.consults.filter(c => c.returnDate && c.returnDate >= t).sort((a, b) => a.returnDate.localeCompare(b.returnDate))[0];
+}
+function viewHoje() {
+  const k = UI.day, today = dayKey(), ts = activeTasks(), c = S.checks[k] || {};
+  const done = ts.filter(t => c[t.id]).length, frac = ts.length ? done / ts.length : 0;
+  const Rr = 27, C = 2 * Math.PI * Rr, G = computeGame(), lv = G.lv;
+  const last7 = Array.from({ length: 7 }, (_, i) => addDays(k, i - 6));
+  const lastW = weightsDesc()[0], j = S.journal[k] || {};
+  const eyebrow = k === today ? 'Hoje' : k === addDays(today, -1) ? 'Ontem' : 'Dia anterior';
+  const banner = PREVIEW
+    ? `<div class="banner" role="note"><p><b>Prévia de teste.</b> Aqui não funcionam GPS, instalar e exportar backup; no app publicado funcionam. <span class="row" style="margin-top:8px"><button class="btn small" data-act="demo-load">Carregar exemplo</button><button class="btn small" data-act="demo-reset">Zerar tudo</button></span></p></div>`
+    : isIOS() && !isStandalone() && !S.meta.hideInstall
+      ? `<div class="banner" role="note"><p><b>Instale como app:</b> no Safari, toque em Compartilhar ${ico('share', 15)} e depois em <b>Adicionar à Tela de Início</b>.</p><button class="icon-btn" data-act="hide-install" aria-label="Fechar aviso">${ico('close', 16)}</button></div>` : '';
+  const ret = nextReturn();
+  const retBanner = ret && daysBetween(today, ret.returnDate) <= 30 ? `<button class="quick" data-act="consult-open" data-id="${ret.id}"><span class="q-ico">${ico('steth', 20)}</span><span class="q-txt"><b>Retorno ${ret.specialty ? 'de ' + esc(ret.specialty) : ''}</b><span class="muted small">${fmtDK(ret.returnDate)} · ${daysBetween(today, ret.returnDate) === 0 ? 'hoje' : 'em ' + plural(daysBetween(today, ret.returnDate), 'dia', 'dias')}</span></span>${ico('next', 18)}</button>` : '';
+  const pctLv = Math.round((G.xp - lv.base) / (lv.next - lv.base) * 100);
+  return `${banner}
+  <section class="day-head">
+    <button class="icon-btn soft" data-act="day-prev" aria-label="Dia anterior">${ico('prev', 20, 2.2)}</button>
+    <div class="day-title"><span class="eyebrow">${eyebrow}</span><h1>${esc(fmtDayLong(k))}</h1></div>
+    <button class="icon-btn soft" data-act="day-next" aria-label="Próximo dia" ${k >= today ? 'disabled' : ''}>${ico('next', 20, 2.2)}</button>
+  </section>
+  <button class="card lvl-card" data-act="game-open" aria-label="Ver nível, missões e conquistas">
+    <svg class="ring" width="70" height="70" viewBox="0 0 70 70" aria-hidden="true"><circle class="bg" cx="35" cy="35" r="${Rr}" fill="none" stroke-width="7"/><circle class="fg" cx="35" cy="35" r="${Rr}" fill="none" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}" transform="rotate(-90 35 35)"/><text x="35" y="41" text-anchor="middle">${done}/${ts.length}</text></svg>
+    <span class="lvl-main">
+      <span class="l-top"><b>Nível ${lv.lvl} · <span class="lvl-name">${esc(lv.name)}</span></b><span class="muted small num">${G.xp - lv.base}/${lv.next - lv.base} XP</span></span>
+      <span class="bar" aria-hidden="true"><i style="width:${pctLv}%"></i></span>
+      <span class="l-stats"><span>${ico('flame', 13, 2)} <b>${G.full}</b> ${G.full === 1 ? 'dia completo' : 'dias completos'}</span>${G.anchor ? `<span>${ico('shield', 13, 2)} <b>${G.clean}</b> ${G.clean === 1 ? 'dia limpo' : 'dias limpo'}</span>` : ''}<span>${ico('trophy', 13, 2)} <b>${G.badges.filter(b => b.got).length}</b>/${G.badges.length}</span></span>
+    </span>
+  </button>
+  ${retBanner}
+  ${ts.length ? `<ul class="list" aria-label="Hábitos">${ts.map(t => {
+    const on = c[t.id]; const sameDay = on && dayKey(new Date(on)) === k;
+    const st = habitStreak(t.id, k);
+    const extra = t.key === 'nofap' && k === today ? (G.clean ? `${G.clean} ${G.clean === 1 ? 'dia' : 'dias'} limpo` : '') : st >= 2 ? `${st} dias seguidos` : '';
+    const sub = [on ? (sameDay ? 'Feito às ' + fmtTime(on) : 'Marcado depois') : '', extra].filter(Boolean).join(' · ');
+    return `<li><button class="task ${on ? 'on' : ''}" data-act="toggle" data-id="${t.id}" aria-pressed="${on ? 'true' : 'false'}">
+      <span class="box">${ico('check', 16, 3)}</span>
+      <span class="tname"><span>${esc(t.name)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
+      <span class="dots" aria-hidden="true" title="Últimos 7 dias">${last7.map(d => `<i class="${isDone(d, t.id) ? 'y' : ''}${d === k ? ' cur' : ''}"></i>`).join('')}</span>
+    </button></li>`; }).join('')}</ul>
+  <div class="legend-7 muted small">bolinhas = últimos 7 dias · ${XP.check} XP por hábito, +${XP.full} no dia completo</div>` : `<div class="empty"><b>Nenhum hábito</b>Adicione os hábitos que você quer marcar todo dia.</div>`}
+  <section class="card stack" aria-label="Energia do dia">
+    <div class="row between"><b>Energia ${k === today ? 'de hoje' : 'do dia'}</b><button class="linkish" data-act="journal-open">Detalhes do dia</button></div>
+    <div class="energy" role="group" aria-label="Energia de 0 a 10">${Array.from({ length: 11 }, (_, i) => `<button data-act="energy" data-v="${i}" aria-pressed="${j.energy === i}">${i}</button>`).join('')}</div>
+    <div class="energy-scale"><span>0 = sem energia</span><span>10 = no topo</span></div>
+  </section>
+  <button class="btn ghost" data-act="edit-tasks">${ico('edit', 17)} Editar hábitos</button>
+  <button class="quick" data-act="weigh"><span class="q-ico">${ico('peso', 22)}</span><span class="q-txt"><b>Registrar peso</b><span class="muted small">${lastW ? `Último: ${fmtKg(lastW.kg)} kg · ${relDay(lastW.ts)}` : 'Grava data, hora e onde você está'}</span></span>${ico('next', 18)}</button>`;
+}
+
+function openGame() {
+  closeSheet();
+  openSheet('Nível e conquistas', () => {
+    const G = computeGame(), lv = G.lv, ins = energyInsights();
+    const pct = Math.round((G.xp - lv.base) / (lv.next - lv.base) * 100);
+    return `<div class="stack">
+      <div class="big-level"><div class="lv">${lv.lvl}</div><div class="fx" style="flex:1;gap:6px"><b style="font-size:18px">${esc(lv.name)}</b><span class="bar"><i style="width:${pct}%"></i></span><span class="muted small num">${G.xp} XP no total · faltam ${lv.next - G.xp} pro nível ${lv.lvl + 1}</span></div></div>
+      <div class="section-label">Missões da semana · +${XP.mission} XP cada</div>
+      <div class="card missions">${G.missions.map(m => `<div class="mission ${m.got >= m.goal ? 'done' : ''}"><div class="m-top"><span>${ico(m.icon, 16)} ${esc(m.name)}</span><b class="num">${m.got}/${m.goal}</b></div><span class="bar"><i style="width:${Math.round(m.got / m.goal * 100)}%"></i></span></div>`).join('')}</div>
+      <div class="section-label">Conquistas · ${G.badges.filter(b => b.got).length} de ${G.badges.length}</div>
+      <div class="badges">${G.badges.map(b => `<div class="badge ${b.got ? 'got' : ''}"><span class="b-ico">${ico(b.icon, 22)}</span><b>${esc(b.name)}</b><span>${esc(b.desc)}${!b.got && b.prog ? ` · ${b.prog}` : ''}</span></div>`).join('')}</div>
+      <div class="section-label">O que dá energia pra você</div>
+      ${ins.length ? `<div class="card"><ul class="insights">${ins.map(x => `<li><span>${esc(x.label)}</span><span class="muted small">com <b>${fmtNum(x.yes, 1)}</b></span><span class="muted small">sem <b>${fmtNum(x.no, 1)}</b></span></li>`).join('')}</ul><p class="muted small" style="margin:10px 0 0">Média da nota de energia nos dias em que fez e em que não fez cada hábito.</p></div>`
+        : `<p class="muted small" style="margin:0">Registre a energia do dia por umas duas semanas. Aqui aparece a média nos dias com e sem cada hábito, pra você ver o que realmente mexe na sua energia.</p>`}
+      <div class="section-label">Como ganhar XP</div>
+      <div class="card small" style="line-height:1.7">Hábito marcado: <b>${XP.check}</b> · Dia completo: <b>+${XP.full}</b> · Peso (1 por dia): <b>${XP.weight}</b> · Energia do dia: <b>${XP.energy}</b> · Exame: <b>${XP.exam}</b> · Consulta: <b>${XP.consult}</b> · Backup (1 por semana): <b>${XP.backup}</b>${G.anchor ? ` · Voltar no dia seguinte depois de escorregar: <b>+${XP.recover}</b>` : ''}<br><span class="muted">XP nunca é tirado. Escorregar zera a sequência, não o nível.</span></div>
+    </div>`;
+  });
+}
+
+function openEditTasks() {
+  closeSheet();
+  openSheet('Hábitos do dia', () => {
+    const ts = activeTasks();
+    return `<div class="stack">
+      <ul class="edit-list">${ts.map((t, i) => `<li>
+        <input id="tk-${t.id}" class="input" data-task-name="${t.id}" value="${esc(t.name)}" aria-label="Nome do hábito">
+        <button class="icon-btn" data-act="task-move" data-id="${t.id}" data-dir="-1" aria-label="Subir" ${i === 0 ? 'disabled' : ''}>${ico('up', 18)}</button>
+        <button class="icon-btn" data-act="task-move" data-id="${t.id}" data-dir="1" aria-label="Descer" ${i === ts.length - 1 ? 'disabled' : ''}>${ico('down', 18)}</button>
+        <button class="icon-btn danger" data-act="task-del" data-id="${t.id}" aria-label="Remover">${ico('trash', 18)}</button></li>`).join('')}</ul>
+      <form data-form="task-add" class="input-row"><input id="tk-new" class="input" placeholder="Novo hábito (ex.: tomar creatina)" enterkeyhint="done" aria-label="Novo hábito"><button class="btn primary" type="submit">Adicionar</button></form>
+      <p class="muted small">Remover um hábito não apaga o histórico dele.</p></div>`;
+  });
+}
+function openJournal() {
+  closeSheet();
+  const k = UI.day;
+  openSheet('Detalhes do dia', () => {
+    const j = S.journal[k] || {}, fam = taskByKey('familia');
+    return `<div class="stack">
+      <p class="muted small" style="margin:0">${esc(fmtDayLong(k))}. Tudo opcional; serve pra você enxergar padrões depois.</p>
+      <div class="grid2"><label class="field"><span>Acordou</span><input id="jr-wake" class="input" type="time" data-jr="wake" value="${esc(j.wake || '')}"></label>
+        <label class="field"><span>Dormiu</span><input id="jr-sleep" class="input" type="time" data-jr="sleep" value="${esc(j.sleep || '')}"></label></div>
+      <label class="field"><span>${fam ? 'Minutos — ' + esc(fam.name) : 'Minutos com a família'}</span><input id="jr-fam" class="input" inputmode="numeric" data-jr="famMin" value="${esc(j.famMin ?? '')}"></label>
+      <div class="grid2"><label class="field"><span>Gatilho do dia (se houve)</span><select id="jr-trig" class="input" data-jr="trigger"><option value="">—</option>${TRIGGERS.map(t => `<option ${j.trigger === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+        <label class="field"><span>Horário do gatilho</span><input id="jr-trig-t" class="input" type="time" data-jr="triggerTime" value="${esc(j.triggerTime || '')}"></label></div>
+      <label class="field"><span>Observações</span><textarea id="jr-obs" class="input" rows="3" data-jr="obs" placeholder="Como foi o dia, o que ajudou, o que atrapalhou…">${esc(j.obs || '')}</textarea></label>
+      <button class="btn primary block" data-act="close-sheet">Pronto</button></div>`;
+  });
+}
+
+/* ---------- peso ---------- */
+let weighing = null;
+function openWeigh() {
+  closeSheet();
+  weighing = { onUpdate: () => { const el = $('#weigh-loc'); if (el) el.innerHTML = weighLocHtml(); } };
+  startLocating(weighing);
+  openSheet('Registrar peso', weighBody, () => { const i = $('#kg-input'); i && i.focus(); });
+  sheetCleanup = () => { weighing = null; };
+}
+function weighLocHtml() {
+  const w = weighing;
+  if (!w || w.status === 'locating') return `${ico('locate', 17)}<span class="muted">Pegando sua localização…</span>`;
+  if (w.status === 'error') return `${ico('semloc', 17)}<span class="muted">${esc(w.error)}<br>O peso será salvo mesmo assim.</span>`;
+  const p = placeOf({ loc: w.loc, placeId: w.placeId, label: w.label, address: w.address, kind: w.kind, locStatus: 'ok' });
+  const extra = w.status === 'located' ? ' · buscando endereço…' : (p.sub ? ' · ' + p.sub : '');
+  return `${ico(p.kind === 'locate' ? 'outro' : p.kind, 17)}<span><b>${esc(p.name)}</b><span class="muted">${esc(extra)}</span><br><span class="muted small">precisão de ± ${w.loc.acc} m</span></span>`;
+}
+function weighBody() {
+  const last = weightsDesc()[0], now = new Date();
+  return `<form data-form="weigh" class="stack" autocomplete="off">
+    <label class="kg-field" for="kg-input"><span class="vh">Peso em quilos</span><input id="kg-input" class="kg-input" inputmode="decimal" enterkeyhint="done" placeholder="${last ? fmtKg(last.kg) : '0,0'}"><b>kg</b></label>
+    <div class="meta">
+      <div class="meta-row">${ico('cal', 17)}<span>${esc(fmtDayLong(dayKey(now)))} · ${fmtTime(now)}</span></div>
+      <div class="meta-row" id="weigh-loc">${weighLocHtml()}</div>
+    </div>
+    <p class="err" id="weigh-err" hidden></p>
+    <button class="btn primary block" type="submit">Salvar peso</button>
+  </form>`;
+}
+function applyLoc(entry, w) {
+  if (w.loc) { entry.loc = w.loc; entry.placeId = w.placeId || null; entry.label = w.label || null; entry.address = w.address || null; entry.kind = w.kind || null; }
+  entry.locStatus = w.status === 'error' ? 'none' : (w.loc ? 'ok' : 'pending');
+  if (w.status === 'error') entry.locError = w.error;
+}
+async function saveWeigh() {
+  const kg = parseNum($('#kg-input').value), err = $('#weigh-err');
+  if (!(kg >= 20 && kg <= 350)) { err.textContent = 'Digite o peso em kg, por exemplo 82,4.'; err.hidden = false; return; }
+  const w = weighing, before = computeGame();
+  const entry = { id: uid(), kg: Math.round(kg * 10) / 10, ts: new Date().toISOString(), loc: null, placeId: null, label: null, address: null, kind: null, locStatus: 'pending' };
+  applyLoc(entry, w);
+  S.weights.push(entry); await save();
+  if (w && w.status !== 'ok' && w.status !== 'error') w.promise.then(() => finishLoc(entry.id, w), () => finishLoc(entry.id, w));
+  closeSheet(); render(); xpToast(before, `Peso salvo: ${fmtKg(entry.kg)} kg`);
+}
+async function finishLoc(id, w) { const e = S.weights.find(x => x.id === id); if (!e) return; applyLoc(e, w); await save(); render(); }
+function viewPeso() {
+  const ws = weightsDesc(), last = ws[0], prev = ws[1];
+  let hero;
+  if (last) {
+    const d = prev ? Math.round((last.kg - prev.kg) * 10) / 10 : null;
+    const dCls = d == null ? '' : d > 0 ? 'up' : d < 0 ? 'down' : 'eq';
+    hero = `<section class="card hero-w"><span class="eyebrow">Último registro</span>
+      <div class="big-num">${fmtKg(last.kg)}<small>kg</small></div>
+      ${d != null ? `<span class="delta ${dCls}">${d > 0 ? '+' : d < 0 ? '−' : '±'}${fmtKg(Math.abs(d))} kg <span class="muted" style="font-weight:500">desde ${fmtShort(prev.ts)}</span></span>` : ''}
+      <div class="row"><span class="muted small">${fmtDate(last.ts)} às ${fmtTime(last.ts)}</span>${placeChip(last)}</div></section>`;
+  } else hero = `<div class="empty"><b>Nenhum peso registrado</b>Cada registro guarda data, hora e o local onde você está.</div>`;
+  const now = Date.now(), days = { '30': 30, '90': 90, '365': 365 }[UI.range];
+  const pts = ws.filter(w => !days || now - Date.parse(w.ts) <= days * 864e5).map(w => ({ t: Date.parse(w.ts), v: w.kg })).reverse();
+  let stats = '';
+  if (pts.length >= 2) {
+    const vs = pts.map(p => p.v), ch = Math.round((vs[vs.length - 1] - vs[0]) * 10) / 10;
+    stats = `<div class="stats"><div><span class="muted small">Variação</span><b>${ch > 0 ? '+' : ch < 0 ? '−' : ''}${fmtKg(Math.abs(ch))} kg</b></div><div><span class="muted small">Mínimo</span><b>${fmtKg(Math.min(...vs))}</b></div><div><span class="muted small">Máximo</span><b>${fmtKg(Math.max(...vs))}</b></div></div>`;
+  }
+  const seg = [['30', '30 dias'], ['90', '90 dias'], ['365', '1 ano'], ['all', 'Tudo']].map(([v, n]) => `<button data-act="range" data-v="${v}" aria-pressed="${UI.range === v}">${n}</button>`).join('');
+  return `<header class="page-head"><h1>Peso</h1><button class="btn primary" data-act="weigh">${ico('plus', 18, 2.2)} Registrar</button></header>
+  ${hero}
+  ${ws.length ? `<section class="card stack"><div class="seg" role="group" aria-label="Período">${seg}</div>${lineChart(pts)}${stats}</section>
+  <h2 class="sec">Histórico</h2>
+  <ul class="list">${ws.map((w, i) => { const pv = ws[i + 1]; const d = pv ? Math.round((w.kg - pv.kg) * 10) / 10 : null;
+    return `<li><button class="row-btn" data-act="weight-open" data-id="${w.id}"><div class="w-row">
+      <span class="w-when">${fmtDate(w.ts)} <span class="muted" style="font-weight:500">· ${fmtTime(w.ts)}</span></span><span class="w-kg">${fmtKg(w.kg)} kg</span>
+      <span>${placeChip(w)}</span><span class="w-d ${d == null ? 'muted' : d > 0 ? 'delta up' : d < 0 ? 'delta down' : 'delta eq'}">${d == null ? '' : (d > 0 ? '+' : d < 0 ? '−' : '±') + fmtKg(Math.abs(d))}</span>
+    </div></button></li>`; }).join('')}</ul>` : ''}`;
+}
+let weightEditId = null;
+function openWeight(id) {
+  closeSheet();
+  weightEditId = id;
+  openSheet('Registro de peso', () => {
+    const w = S.weights.find(x => x.id === id); if (!w) return '<p>Registro não encontrado.</p>';
+    const p = placeOf(w);
+    const opts = [`<option value="">${w.label || w.address ? 'Endereço detectado' : '— nenhum —'}</option>`, ...S.places.map(pl => `<option value="${pl.id}" ${pl.id === w.placeId ? 'selected' : ''}>${esc(pl.name)}</option>`)].join('');
+    const mapUrl = w.loc ? `https://maps.apple.com/?ll=${w.loc.lat},${w.loc.lng}&q=${encodeURIComponent(p.name)}` : '';
+    return `<div class="stack">
+      <form data-form="weight-edit" class="input-row"><input id="we-kg" class="input" inputmode="decimal" value="${fmtKg(w.kg)}" aria-label="Peso em kg"><button class="btn primary" type="submit">Salvar</button></form>
+      <dl class="dl"><dt>Data</dt><dd>${fmtDate(w.ts)} às ${fmtTime(w.ts)}</dd>
+        <dt>Local</dt><dd>${esc(p.name)}${p.sub ? `<br><span class="muted small">${esc(p.sub)}</span>` : ''}</dd>
+        ${w.loc ? `<dt>GPS</dt><dd class="num">${w.loc.lat.toFixed(5)}, ${w.loc.lng.toFixed(5)}<br><span class="muted small">precisão ± ${w.loc.acc} m</span></dd>` : ''}</dl>
+      ${w.loc ? `<a class="btn" href="${mapUrl}" target="_blank" rel="noopener">${ico('map', 18)} Ver no mapa</a>
+      <label class="field"><span>Trocar o local</span><select id="we-place" class="input" data-weight-place="${w.id}">${opts}</select></label>
+      <button class="btn" data-act="place-from-weight" data-id="${w.id}">${ico('plus', 18)} Salvar este ponto como local</button>` : ''}
+      <button class="btn ghost" style="color:var(--bad)" data-act="weight-del" data-id="${w.id}">${ico('trash', 18)} Excluir registro</button></div>`;
+  });
+  sheetCleanup = () => { weightEditId = null; };
+}
+
+/* ---------- saúde: exames, consultas, ficha ---------- */
+function mkStatus(m) {
+  if (m.num == null || isNaN(m.num)) return null;
+  if (m.refMin != null && m.num < m.refMin) return 'baixo';
+  if (m.refMax != null && m.num > m.refMax) return 'alto';
+  if (m.refMin != null || m.refMax != null) return 'normal';
+  return null;
+}
+const statusChip = s => s === 'alto' ? '<span class="chip bad">Alto</span>' : s === 'baixo' ? '<span class="chip low">Baixo</span>' : s === 'normal' ? '<span class="chip ok">Normal</span>' : '';
+const refText = m => m.refText ? 'ref. ' + m.refText : m.refMin != null && m.refMax != null ? `ref. ${fmtNum(m.refMin)}–${fmtNum(m.refMax)}` : m.refMin != null ? `ref. ≥ ${fmtNum(m.refMin)}` : m.refMax != null ? `ref. ≤ ${fmtNum(m.refMax)}` : '';
+const mkKey = n => String(n).trim().toLowerCase();
+function markerIndex() {
+  const map = new Map();
+  const exs = [...S.exams].sort((a, b) => a.date.localeCompare(b.date));
+  for (const e of exs) for (const m of e.markers) {
+    if (!m.name) continue; const k = mkKey(m.name);
+    if (!map.has(k)) map.set(k, { key: k, name: m.name, unit: m.unit, pts: [], rows: [] });
+    const it = map.get(k); it.name = m.name; if (m.unit) it.unit = m.unit;
+    it.rows.push({ date: e.date, examId: e.id, m });
+    if (m.num != null && !isNaN(m.num)) it.pts.push({ t: parseDay(e.date).getTime(), v: m.num });
+    it.last = m;
+  }
+  return [...map.values()].filter(x => x.pts.length).sort((a, b) => (b.pts.length - a.pts.length) || a.name.localeCompare(b.name, 'pt-BR'));
+}
+const outCount = e => e.markers.filter(m => { const s = mkStatus(m); return s === 'alto' || s === 'baixo'; }).length;
+function viewSaude() {
+  const seg = [['exames', 'Exames'], ['consultas', 'Consultas'], ['ficha', 'Ficha']].map(([v, n]) => `<button data-act="sub" data-v="${v}" aria-pressed="${UI.sub === v}">${n}</button>`).join('');
+  const btn = UI.sub === 'exames' ? `<button class="btn primary" data-act="exam-new">${ico('plus', 18, 2.2)} Exame</button>` : UI.sub === 'consultas' ? `<button class="btn primary" data-act="consult-new">${ico('plus', 18, 2.2)} Consulta</button>` : '';
+  let body = '';
+  if (UI.sub === 'exames') {
+    const ex = [...S.exams].sort((a, b) => b.date.localeCompare(a.date) || (b.created || '').localeCompare(a.created || ''));
+    const idx = markerIndex();
+    body = `${ex.length ? `<ul class="list">${ex.map(e => { const out = outCount(e);
+      return `<li><button class="row-btn" data-act="exam-open" data-id="${e.id}"><div class="rb-main"><b>${esc(e.title || 'Exame')}</b><span class="muted small">${fmtDK(e.date)}${e.lab ? ' · ' + esc(e.lab) : ''} · ${plural(e.markers.length, 'resultado', 'resultados')}</span>${out ? `<span class="chip bad" style="align-self:flex-start;margin-top:4px">${out} fora da referência</span>` : ''}</div>
+        <div class="rb-side">${(e.files || []).length ? ico('file', 16) : ''}${ico('next', 16)}</div></button></li>`; }).join('')}</ul>`
+      : `<div class="empty"><b>Nenhum exame ainda</b>Toque em Exame pra lançar os resultados e anexar a foto ou o PDF do laudo.</div>`}
+    ${idx.length ? `<button class="quick" data-act="tab" data-tab="resultados"><span class="q-ico">${ico('bolt', 20)}</span><span class="q-txt"><b>Gráficos de cada resultado</b><span class="muted small">Vitamina D, glicemia, colesterol, hemograma… na aba Resultados</span></span>${ico('next', 18)}</button>` : ''}`;
+  } else if (UI.sub === 'consultas') {
+    const cs = [...S.consults].sort((a, b) => b.date.localeCompare(a.date));
+    body = cs.length ? `<ul class="list">${cs.map(c => `<li><button class="row-btn" data-act="consult-open" data-id="${c.id}"><div class="rb-main"><b>${esc(c.specialty || 'Consulta')}</b><span class="muted small">${fmtDK(c.date)}${c.doctor ? ' · ' + esc(c.doctor) : ''}${c.place ? ' · ' + esc(c.place) : ''}</span>${c.returnDate && c.returnDate >= dayKey() ? `<span class="chip k-casa" style="align-self:flex-start;margin-top:4px">${ico('cal', 13, 2)}<span>Retorno ${fmtDK(c.returnDate)}</span></span>` : ''}</div><div class="rb-side">${(c.files || []).length ? ico('file', 16) : ''}${ico('next', 16)}</div></button></li>`).join('')}</ul>`
+      : `<div class="empty"><b>Nenhuma consulta ainda</b>Registre médico, motivo, o que foi orientado e a data do retorno. O retorno aparece na tela Hoje.</div>`;
+  } else {
+    const p = S.profile;
+    const f = (id, key, label, ph, rows) => rows ? `<label class="field"><span>${label}</span><textarea id="pf-${id}" class="input" rows="${rows}" data-pf="${key}" placeholder="${esc(ph)}">${esc(p[key])}</textarea></label>` : `<label class="field"><span>${label}</span><input id="pf-${id}" class="input" data-pf="${key}" value="${esc(p[key])}" placeholder="${esc(ph)}"></label>`;
+    body = `<div class="ficha-top"><div class="card"><span class="muted small">${ico('drop', 14)} Tipo sanguíneo</span><b>${esc(p.blood || '—')}</b></div><div class="card"><span class="muted small">${ico('eye', 14)} Visão</span><b style="font-size:15px">${esc(p.vision || '—')}</b></div></div>
+    <section class="card stack">${f('blood', 'blood', 'Tipo sanguíneo', 'Ex.: O negativo')}${f('vision', 'vision', 'Visão / óculos', 'Ex.: miopia -1,50')}${f('allergies', 'allergies', 'Alergias', 'Nenhuma conhecida')}${f('meds', 'meds', 'Remédios e suplementos em uso', 'Ex.: vitamina D 2.000 UI', 2)}${f('conditions', 'conditions', 'Condições e observações', '', 3)}${f('emergency', 'emergency', 'Contato de emergência', 'Nome e telefone')}</section>
+    <p class="muted small">Salva sozinho enquanto você digita. Útil pra mostrar num atendimento de emergência.</p>`;
+  }
+  return `<header class="page-head"><h1>Saúde</h1>${btn}</header><div class="seg tabs-sub" role="group" aria-label="Seção">${seg}</div>${body}`;
+}
+
+/* formulário compartilhado (exame ou consulta) */
+let FD = null;
+function newMarker(o = {}) { return { id: uid(), name: '', raw: '', unit: '', refMin: '', refMax: '', ...o }; }
+function openExamForm(id) {
+  closeSheet();
+  const e = id && S.exams.find(x => x.id === id);
+  FD = e ? { kind: 'exam', id: e.id, date: e.date, title: e.title || '', lab: e.lab || '', notes: e.notes || '', loc: e.loc || null,
+      markers: e.markers.map(m => ({ id: m.id, name: m.name, raw: m.raw, unit: m.unit || '', refMin: m.refMin ?? '', refMax: m.refMax ?? '', refText: m.refText || '' })),
+      files: [...(e.files || [])], removed: [], newFiles: [] }
+    : { kind: 'exam', id: null, date: dayKey(), title: 'Exame de sangue', lab: '', notes: '', loc: null, markers: [newMarker(), newMarker()], files: [], removed: [], newFiles: [] };
+  openSheet(e ? 'Editar exame' : 'Novo exame', formBody);
+  sheetCleanup = () => { FD = null; };
+}
+function openConsultForm(id) {
+  closeSheet();
+  const c = id && S.consults.find(x => x.id === id);
+  FD = c ? { kind: 'consult', id: c.id, date: c.date, time: c.time || '', specialty: c.specialty || '', doctor: c.doctor || '', place: c.place || '', loc: c.loc || null, reason: c.reason || '', notes: c.notes || '', returnDate: c.returnDate || '', files: [...(c.files || [])], removed: [], newFiles: [] }
+    : { kind: 'consult', id: null, date: dayKey(), time: '', specialty: '', doctor: '', place: '', loc: null, reason: '', notes: '', returnDate: '', files: [], removed: [], newFiles: [] };
+  openSheet(c ? 'Editar consulta' : 'Nova consulta', formBody);
+  sheetCleanup = () => { FD = null; };
+}
+function formBody() {
+  const d = FD;
+  const fileLi = (f, i, isNew) => `<li>${ico('file', 16)}<span>${esc(f.name)}</span><button type="button" class="icon-btn" data-act="${isNew ? 'fd-del-new' : 'fd-del-old'}" data-i="${i}" aria-label="Remover arquivo">${ico('close', 16)}</button></li>`;
+  const files = `<div class="section-label">${d.kind === 'exam' ? 'Laudo (foto ou PDF)' : 'Receita, pedido ou laudo'}</div>
+    ${d.files.length || d.newFiles.length ? `<ul class="files">${d.files.map((f, i) => fileLi(f, i, false)).join('')}${d.newFiles.map((f, i) => fileLi(f, i, true)).join('')}</ul>` : ''}
+    <label class="btn" for="fd-files">${ico('file', 17)} Anexar foto ou PDF</label><input id="fd-files" class="vh" type="file" accept="image/*,application/pdf" multiple>`;
+  const here = key => `<button type="button" class="btn small" data-act="fd-here" data-k="${key}">${ico('locate', 16)} Aqui</button>`;
+  if (d.kind === 'consult') return `<form data-form="fd" class="stack" autocomplete="off">
+    <div class="grid2"><label class="field"><span>Data</span><input id="cs-date" class="input" type="date" data-draft="date" value="${esc(d.date)}" required></label>
+      <label class="field"><span>Horário</span><input id="cs-time" class="input" type="time" data-draft="time" value="${esc(d.time)}"></label></div>
+    <label class="field"><span>Especialidade</span><input id="cs-spec" class="input" data-draft="specialty" list="specs" value="${esc(d.specialty)}" placeholder="Ex.: Clínico geral"></label>
+    <datalist id="specs">${['Clínico geral', 'Cardiologista', 'Dermatologista', 'Endocrinologista', 'Nutricionista', 'Oftalmologista', 'Optometria', 'Ortopedista', 'Psicólogo', 'Psiquiatra', 'Urologista', 'Dentista', 'Fisioterapeuta'].map(s => `<option value="${s}"></option>`).join('')}</datalist>
+    <label class="field"><span>Profissional</span><input id="cs-doc" class="input" data-draft="doctor" value="${esc(d.doctor)}" placeholder="Nome do médico ou profissional"></label>
+    <label class="field"><span>Local</span><div class="input-row"><input id="cs-place" class="input" data-draft="place" value="${esc(d.place)}" placeholder="Clínica, hospital, cidade">${here('place')}</div></label>
+    <label class="field"><span>Motivo</span><textarea id="cs-reason" class="input" rows="2" data-draft="reason" placeholder="Por que foi à consulta">${esc(d.reason)}</textarea></label>
+    <label class="field"><span>O que foi dito / orientações</span><textarea id="cs-notes" class="input" rows="4" data-draft="notes" placeholder="Diagnóstico, remédios, exames pedidos…">${esc(d.notes)}</textarea></label>
+    <label class="field"><span>Data do retorno</span><input id="cs-ret" class="input" type="date" data-draft="returnDate" value="${esc(d.returnDate)}"></label>
+    ${files}
+    <p class="err" id="fd-err" hidden></p>
+    <button class="btn primary block" type="submit">Salvar consulta</button></form>`;
+  return `<form data-form="fd" class="stack" autocomplete="off">
+    <div class="grid2"><label class="field"><span>Data da coleta</span><input id="ex-date" class="input" type="date" data-draft="date" value="${esc(d.date)}" max="${dayKey()}" required></label>
+      <label class="field"><span>Tipo</span><input id="ex-title" class="input" data-draft="title" value="${esc(d.title)}" placeholder="Exame de sangue"></label></div>
+    <label class="field"><span>Laboratório / local</span><div class="input-row"><input id="ex-lab" class="input" data-draft="lab" value="${esc(d.lab)}" placeholder="Nome do laboratório">${here('lab')}</div></label>
+    <div class="section-label">Resultados</div>
+    <datalist id="mk-presets">${PRESETS.map(p => `<option value="${esc(p[0])}"></option>`).join('')}</datalist>
+    <div class="markers">${d.markers.map(m => `<div class="mk">
+      <div class="mk-top"><input id="mk-n-${m.id}" class="input" list="mk-presets" data-mk="${m.id}" data-f="name" value="${esc(m.name)}" placeholder="Nome (ex.: Glicose em jejum)" aria-label="Nome do resultado"><button type="button" class="icon-btn" data-act="mk-del" data-id="${m.id}" aria-label="Remover resultado">${ico('close', 16)}</button></div>
+      <div class="mk-grid"><label><span>Valor</span><input id="mk-v-${m.id}" class="input" inputmode="decimal" data-mk="${m.id}" data-f="raw" value="${esc(m.raw)}"></label>
+        <label><span>Unidade</span><input id="mk-u-${m.id}" class="input" data-mk="${m.id}" data-f="unit" value="${esc(m.unit)}"></label>
+        <label><span>Ref. mín</span><input id="mk-a-${m.id}" class="input" inputmode="decimal" data-mk="${m.id}" data-f="refMin" value="${esc(m.refMin)}"></label>
+        <label><span>Ref. máx</span><input id="mk-b-${m.id}" class="input" inputmode="decimal" data-mk="${m.id}" data-f="refMax" value="${esc(m.refMax)}"></label></div></div>`).join('')}</div>
+    <button type="button" class="btn ghost" data-act="mk-add">${ico('plus', 17, 2.2)} Adicionar resultado</button>
+    ${files}
+    <label class="field"><span>Observações</span><textarea id="ex-notes" class="input" rows="3" data-draft="notes" placeholder="Jejum de 12h, médico que pediu…">${esc(d.notes)}</textarea></label>
+    <p class="err" id="fd-err" hidden></p>
+    <button class="btn primary block" type="submit">Salvar exame</button></form>`;
+}
+async function compressImage(file) {
+  try {
+    if (!file.type.startsWith('image/') || file.size < 900000) return file;
+    const bmp = await createImageBitmap(file); const max = 2200, sc = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.86));
+    return blob && blob.size < file.size ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file;
+  } catch (_) { return file; }
+}
+async function persistFiles(d) {
+  const files = [...d.files];
+  for (const f of d.newFiles) {
+    const ff = await compressImage(f); const id = uid(); const buf = await ff.arrayBuffer();
+    await Store.put('files', id, { buf, type: ff.type || 'application/octet-stream', name: ff.name });
+    files.push({ id, name: ff.name, type: ff.type, size: ff.size });
+  }
+  for (const f of d.removed) { try { await Store.del('files', f.id); } catch (_) {} }
+  return files;
+}
+async function saveForm() {
+  const d = FD, err = $('#fd-err'), before = computeGame();
+  if (!d.date) { err.textContent = 'Informe a data.'; err.hidden = false; return; }
+  const files = await persistFiles(d);
+  if (d.kind === 'exam') {
+    const markers = d.markers.filter(m => m.name.trim()).map(m => {
+      const a = parseNum(m.refMin), b = parseNum(m.refMax), n = parseNum(m.raw);
+      const o = { id: m.id, name: m.name.trim(), raw: String(m.raw).trim(), num: isNaN(n) ? null : n, unit: m.unit.trim(), refMin: isNaN(a) ? null : a, refMax: isNaN(b) ? null : b };
+      if (m.refText && isNaN(a) && isNaN(b)) o.refText = m.refText;
+      return o;
+    });
+    const obj = { id: d.id || uid(), date: d.date, title: d.title.trim(), lab: d.lab.trim(), notes: d.notes.trim(), loc: d.loc, markers, files };
+    const i = S.exams.findIndex(x => x.id === obj.id);
+    if (i >= 0) { obj.created = S.exams[i].created; S.exams[i] = obj; } else { obj.created = new Date().toISOString(); S.exams.push(obj); }
+    await save(); closeSheet(); UI.tab = 'saude'; UI.sub = 'exames'; render(); xpToast(before, 'Exame salvo');
+  } else {
+    const obj = { id: d.id || uid(), date: d.date, time: d.time, specialty: d.specialty.trim(), doctor: d.doctor.trim(), place: d.place.trim(), loc: d.loc, reason: d.reason.trim(), notes: d.notes.trim(), returnDate: d.returnDate || '', files };
+    const i = S.consults.findIndex(x => x.id === obj.id);
+    if (i >= 0) { obj.created = S.consults[i].created; S.consults[i] = obj; } else { obj.created = new Date().toISOString(); S.consults.push(obj); }
+    await save(); closeSheet(); UI.tab = 'saude'; UI.sub = 'consultas'; render(); xpToast(before, 'Consulta salva');
+  }
+}
+let openUrls = [];
+function revokeUrls() { openUrls.forEach(u => URL.revokeObjectURL(u)); openUrls = []; }
+async function fileBlob(id) { const f = await Store.get('files', id); return f ? { blob: new Blob([f.buf], { type: f.type }), name: f.name, type: f.type } : null; }
+const thumbsHtml = files => files && files.length ? `<div class="thumbs">${files.map(f => `<button class="thumb" data-act="file-open" data-id="${f.id}" data-file-thumb="${f.id}" data-type="${esc(f.type)}">${f.type === 'application/pdf' ? `<span class="pdf">${ico('file', 26)}<span>${esc(f.name)}</span></span>` : '<span class="muted small">carregando…</span>'}</button>`).join('')}</div>` : '';
+function openExam(id) {
+  closeSheet();
+  openSheet('Exame', () => {
+    const e = S.exams.find(x => x.id === id); if (!e) return '<p>Exame não encontrado.</p>';
+    return `<div class="stack">
+      <div><span class="eyebrow">${fmtDK(e.date)}</span><h2 style="margin-top:4px">${esc(e.title || 'Exame')}</h2>${e.lab ? `<p class="muted" style="margin:4px 0 0">${esc(e.lab)}</p>` : ''}</div>
+      ${e.markers.length ? `<div class="card" style="padding:4px 12px"><table class="res-table"><tbody>${e.markers.map(m => `<tr><td><button class="linkish" data-act="mk-open" data-key="${esc(mkKey(m.name))}">${esc(m.name)}</button><div class="r">${esc(refText(m))}</div></td><td class="v">${esc(m.raw)} <span class="muted small" style="font-weight:500">${esc(m.unit)}</span><div>${statusChip(mkStatus(m))}</div></td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Sem resultados lançados.</p>'}
+      ${(e.files || []).length ? `<div class="section-label">Laudo completo</div>${e.files.filter(f => f.type === 'application/pdf').map(f => `<button class="quick" data-act="file-open" data-id="${f.id}"><span class="q-ico">${ico('file', 20)}</span><span class="q-txt"><b>Abrir laudo em PDF</b><span class="muted small">${esc(f.name)}</span></span>${ico('next', 18)}</button>`).join('')}${thumbsHtml(e.files.filter(f => f.type !== 'application/pdf'))}` : ''}
+      ${e.notes ? `<div><div class="section-label">Observações</div><p style="margin:6px 0 0;white-space:pre-wrap">${esc(e.notes)}</p></div>` : ''}
+      <p class="muted small" style="margin:0">Alto/Baixo compara com a referência do próprio laudo. Quem interpreta é o médico.</p>
+      <div class="row"><button class="btn" style="flex:1" data-act="exam-edit" data-id="${e.id}">${ico('edit', 17)} Editar</button><button class="btn ghost" style="color:var(--bad)" data-act="exam-del" data-id="${e.id}">${ico('trash', 17)} Excluir</button></div></div>`;
+  }, loadThumbs);
+  sheetCleanup = revokeUrls;
+}
+function openConsult(id) {
+  closeSheet();
+  openSheet('Consulta', () => {
+    const c = S.consults.find(x => x.id === id); if (!c) return '<p>Consulta não encontrada.</p>';
+    const row = (l, v) => v ? `<dt>${l}</dt><dd style="white-space:pre-wrap">${esc(v)}</dd>` : '';
+    return `<div class="stack">
+      <div><span class="eyebrow">${fmtDK(c.date)}${c.time ? ' · ' + esc(c.time) : ''}</span><h2 style="margin-top:4px">${esc(c.specialty || 'Consulta')}</h2></div>
+      <dl class="dl">${row('Profissional', c.doctor)}${row('Local', c.place)}${row('Motivo', c.reason)}${row('Orientações', c.notes)}${c.returnDate ? `<dt>Retorno</dt><dd>${fmtDK(c.returnDate)}</dd>` : ''}</dl>
+      ${(c.files || []).length ? `<div class="section-label">Anexos</div>${thumbsHtml(c.files)}` : ''}
+      <div class="row"><button class="btn" style="flex:1" data-act="consult-edit" data-id="${c.id}">${ico('edit', 17)} Editar</button><button class="btn ghost" style="color:var(--bad)" data-act="consult-del" data-id="${c.id}">${ico('trash', 17)} Excluir</button></div></div>`;
+  }, loadThumbs);
+  sheetCleanup = revokeUrls;
+}
+async function loadThumbs() {
+  for (const el of document.querySelectorAll('[data-file-thumb]')) {
+    if (el.dataset.type === 'application/pdf') continue;
+    try { const f = await fileBlob(el.dataset.fileThumb); if (!f) continue; const u = URL.createObjectURL(f.blob); openUrls.push(u); el.innerHTML = `<img src="${u}" alt="${esc(f.name)}">`; } catch (_) {}
+  }
+}
+async function openFile(id) {
+  const f = await fileBlob(id); if (!f) return toast('Arquivo não encontrado');
+  if (f.type.startsWith('image/')) {
+    const u = URL.createObjectURL(f.blob); const root = $('#viewer-root');
+    root.innerHTML = `<div class="viewer" data-act="viewer-close"><img src="${u}" alt="${esc(f.name)}"><button class="icon-btn" data-act="viewer-close" aria-label="Fechar">${ico('close', 20, 2.2)}</button></div>`;
+    root.hidden = false; root._url = u; return;
+  }
+  if (f.type === 'application/pdf') return openPdf(id, f);
+  return shareFile(f);
+}
+async function shareFile(f) {
+  const file = new File([f.blob], f.name, { type: f.type });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  const u = URL.createObjectURL(f.blob); const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000);
+}
+function openMarker(key) {
+  closeSheet();
+  const it = markerIndex().find(x => x.key === key);
+  openSheet(it ? it.name : 'Resultado', () => {
+    if (!it) return '<p class="muted">Sem valores numéricos pra esse resultado ainda.</p>';
+    const last = it.last;
+    return `<div class="stack"><div class="card">${lineChart(it.pts, { refMin: last.refMin, refMax: last.refMax, dec: 2, area: false })}${last.refMin != null || last.refMax != null ? '<p class="muted small" style="margin:6px 0 0">Faixa verde = referência do último laudo.</p>' : ''}</div>
+      <div class="card" style="padding:4px 12px"><table class="res-table"><tbody>${[...it.rows].reverse().map(r => `<tr><td>${fmtDK(r.date)}<div class="r">${esc(refText(r.m))}</div></td><td class="v">${esc(r.m.raw)} <span class="muted small" style="font-weight:500">${esc(r.m.unit)}</span><div>${statusChip(mkStatus(r.m))}</div></td></tr>`).join('')}</tbody></table></div></div>`;
+  });
+}
+
+
+/* ---------- aba Resultados (exames técnicos) ---------- */
+const CATS = [
+  ['vitaminas', 'Vitaminas e minerais', /vitamina|b12|ferritina|ferro|magn[eé]sio|c[aá]lcio|zinco|f[oó]lico|s[oó]dio|pot[aá]ssio/],
+  ['glicemia', 'Glicemia', /(^|\s)glic|glicada|hba1c|insulina/],
+  ['hemograma', 'Hemograma', /^(hem[aá]cias|hemoglobina|hemat[oó]crito|vcm|hcm|chcm|rdw|leuc[oó]citos|segmentados|bastonetes|eosin|bas[oó]filos|linf[oó]citos|mon[oó]citos|plaquetas)/],
+  ['colesterol', 'Colesterol e triglicerídeos', /colesterol|hdl|ldl|vldl|triglic/],
+  ['rins', 'Rins', /creatinina|ureia|[aá]cido [uú]rico|filtra[cç]/],
+  ['figado', 'Fígado', /tgo|tgp|gama|ggt|bilirrubina|fosfatase/],
+  ['tireoide', 'Tireoide', /tsh|t4|t3/],
+  ['hormonios', 'Hormônios', /testosterona|estradiol|cortisol|psa|prolactina/],
+  ['urina', 'Urina', /urina/],
+  ['visao', 'Visão', /grau|autorrefrator/],
+  ['outros', 'Outros', /.*/]
+];
+function catOf(name) { const n = mkKey(name); if (/eletroforese/.test(n)) return 'outros'; if (/urina/.test(n)) return 'urina'; if (/grau|autorrefrator/.test(n)) return 'visao'; for (const [id, , re] of CATS) if (re.test(n)) return id; return 'outros'; }
+const refDist = (v, m) => m.refMin != null && v < m.refMin ? m.refMin - v : m.refMax != null && v > m.refMax ? v - m.refMax : 0;
+function miniChart(it) {
+  const pts = it.pts.slice(-6), last = it.last;
+  const W = 340, H = pts.length === 1 ? 78 : 112, L = 14, R = 14, T = 22, B = 24;
+  const ys = pts.map(p => p.v); let lo = Math.min(...ys), hi = Math.max(...ys);
+  const span0 = (hi - lo) || Math.abs(hi) * 0.2 || 1;
+  if (last.refMin != null && last.refMin < lo && lo - last.refMin < span0 * 2) lo = last.refMin;
+  if (last.refMax != null && last.refMax > hi && last.refMax - hi < span0 * 2) hi = last.refMax;
+  const pad = ((hi - lo) || span0) * 0.18; lo -= pad; hi += pad;
+  const sx = i => pts.length === 1 ? W / 2 : L + 22 + i * (W - L - R - 44) / (pts.length - 1);
+  const sy = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  let g = '';
+  if (last.refMin != null || last.refMax != null) {
+    const a = sy(Math.min(hi, last.refMax != null ? last.refMax : hi)), b = sy(Math.max(lo, last.refMin != null ? last.refMin : lo));
+    if (b > a) g += `<rect class="band" x="${L}" y="${a.toFixed(1)}" width="${W - L - R}" height="${(b - a).toFixed(1)}" rx="4"/>`;
+  }
+  g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/>`;
+  const xy = pts.map((p, i) => [sx(i), sy(p.v)]);
+  if (pts.length > 1) g += `<path class="line" d="${xy.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('')}"/>`;
+  const dec = Math.max(...pts.map(p => (String(p.v).split('.')[1] || '').length)) > 1 ? 2 : 1;
+  xy.forEach((p, i) => {
+    const isLast = i === xy.length - 1;
+    g += `<circle class="${isLast ? 'end' : 'pt'}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${isLast ? 5 : 3.5}"/>`;
+    g += `<text class="${isLast ? 'end-lbl' : 'axis'}" x="${p[0].toFixed(1)}" y="${(p[1] - 10).toFixed(1)}" text-anchor="middle" style="font-weight:700">${fmtNum(pts[i].v, dec)}</text>`;
+    g += `<text class="axis" x="${p[0].toFixed(1)}" y="${H - 8}" text-anchor="middle">${new Date(pts[i].t).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}</text>`;
+  });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Histórico de ${esc(it.name)}">${g}</svg>`;
+}
+function deltaHtml(it) {
+  if (it.pts.length < 2) return `<span class="rc-delta muted">Só 1 exame até agora</span>`;
+  const a = it.pts[it.pts.length - 2], b = it.pts[it.pts.length - 1], m = it.last, d = b.v - a.v;
+  if (Math.abs(d) < 1e-9) return `<span class="rc-delta muted">= igual ao exame de ${fmtShort(a.t)}</span>`;
+  const pct = a.v ? Math.round(d / Math.abs(a.v) * 100) : null;
+  const da = refDist(a.v, m), db = refDist(b.v, m);
+  const cls = db < da ? 'good' : db > da ? 'bad' : 'muted';
+  const dec = Math.abs(d) < 1 ? 2 : Math.abs(d) < 10 ? 1 : 0;
+  return `<span class="rc-delta ${cls}">${d > 0 ? '↑' : '↓'} ${d > 0 ? '+' : '−'}${fmtNum(Math.abs(d), dec)}${pct != null && Math.abs(pct) >= 1 ? ` (${d > 0 ? '+' : '−'}${Math.abs(pct)}%)` : ''} desde ${new Date(a.t).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}${cls === 'good' ? ' · mais perto da referência' : cls === 'bad' ? ' · mais longe da referência' : ''}</span>`;
+}
+function viewResultados() {
+  const idx = markerIndex();
+  if (!idx.length) return `<header class="page-head"><h1>Resultados</h1></header><div class="empty"><b>Nenhum resultado ainda</b>Lance um exame em Saúde › Exames. Cada valor (vitamina D, glicemia, colesterol…) ganha um gráfico aqui.</div>`;
+  const groups = CATS.map(([id, name]) => ({ id, name, items: idx.filter(it => catOf(it.name) === id) })).filter(g => g.items.length);
+  const lastExamDate = [...S.exams].filter(e => e.markers.some(m => m.num != null)).map(e => e.date).sort().pop();
+  const flagged = idx.filter(it => { const r = it.rows[it.rows.length - 1]; const s = mkStatus(it.last); return r.date === lastExamDate && (s === 'alto' || s === 'baixo'); });
+  const chips = [['todos', 'Todos'], ...groups.map(g => [g.id, g.name.split(' e ')[0]])].map(([v, n]) => `<button data-act="cat" data-v="${v}" aria-pressed="${UI.cat === v}">${esc(n)}</button>`).join('');
+  const shown = UI.cat === 'todos' ? groups : groups.filter(g => g.id === UI.cat);
+  return `<header class="page-head"><h1>Resultados</h1><span class="muted small">${plural(idx.length, 'item', 'itens')}</span></header>
+  ${flagged.length ? `<section class="card stack" style="gap:8px"><b>Fora da referência no último exame (${fmtDK(lastExamDate)})</b>${flagged.map(it => `<button class="linkish row between" style="width:100%" data-act="mk-open" data-key="${esc(it.key)}"><span>${esc(it.name)}: <b class="num">${esc(it.last.raw)}</b> <span class="muted small">${esc(it.last.unit || '')} · ${esc(refText(it.last))}</span></span>${statusChip(mkStatus(it.last))}</button>`).join('')}<span class="muted small">Comparação com a referência impressa no laudo. Quem interpreta é o médico.</span></section>` : ''}
+  <div class="chips-scroll" role="group" aria-label="Grupos">${chips}</div>
+  ${shown.map(g => `<h2 class="sec">${esc(g.name)}</h2><div class="res-list">${g.items.map(it => `<button class="card res-card" data-act="mk-open" data-key="${esc(it.key)}">
+      <span class="rc-top"><span class="rc-name"><b>${esc(it.name)}</b><span class="muted small">${esc(refText(it.last))}</span></span><span class="rc-val"><span><b class="num">${esc(it.last.raw)}</b> <span class="muted small">${esc(it.last.unit || '')}</span></span>${statusChip(mkStatus(it.last))}</span></span>
+      ${deltaHtml(it)}
+      ${miniChart(it)}
+    </button>`).join('')}</div>`).join('')}`;
+}
+
+/* ---------- visualizador de PDF (laudo na íntegra) ---------- */
+let pdfLib = null;
+async function loadPdfLib() {
+  if (pdfLib) return pdfLib;
+  pdfLib = await import(new URL('pdf.min.mjs', document.baseURI).href);
+  pdfLib.GlobalWorkerOptions.workerSrc = new URL('pdf.worker.min.mjs', document.baseURI).href;
+  return pdfLib;
+}
+async function openPdf(id, f) {
+  const root = $('#viewer-root');
+  root.innerHTML = `<div class="pdfv" role="dialog" aria-modal="true" aria-label="${esc(f.name)}"><div class="pdfv-bar"><button class="btn small" data-act="viewer-close">Fechar</button><span class="pdfv-name">${esc(f.name)}</span><button class="btn small" data-act="file-share" data-id="${id}">${ico('share', 16)}</button></div><div class="pdfv-pages" id="pdfv-pages"><p class="muted center">Abrindo o laudo…</p></div></div>`;
+  root.hidden = false; document.body.classList.add('locked');
+  const box = $('#pdfv-pages');
+  try {
+    const lib = await loadPdfLib();
+    const doc = await lib.getDocument({ data: new Uint8Array(await f.blob.arrayBuffer()), isEvalSupported: false }).promise;
+    box.innerHTML = '';
+    const width = Math.min(box.clientWidth - 16, 900), dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    for (let i = 1; i <= doc.numPages; i++) {
+      if (root.hidden) return;
+      const page = await doc.getPage(i), vp1 = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: width / vp1.width * dpr });
+      const c = document.createElement('canvas'); c.width = Math.floor(vp.width); c.height = Math.floor(vp.height); c.setAttribute('aria-label', `Página ${i} de ${doc.numPages}`);
+      box.appendChild(c);
+      await page.render({ canvas: c, canvasContext: c.getContext('2d'), viewport: vp }).promise;
+    }
+    const n = document.createElement('p'); n.className = 'muted small center'; n.textContent = `${plural(doc.numPages, 'página', 'páginas')} · pinça pra dar zoom`; box.appendChild(n);
+  } catch (e) {
+    const u = URL.createObjectURL(f.blob); root._url = u;
+    box.innerHTML = `<iframe class="pdfv-frame" src="${u}" title="${esc(f.name)}"></iframe><p class="muted small center">Se não aparecer, toque em ${ico('share', 14)} e escolha abrir no app Arquivos.</p>`;
+  }
+}
+
+/* ---------- locais ---------- */
+let placeDraft = null;
+function openPlaceForm(id, presetLoc) {
+  closeSheet();
+  const p = id && S.places.find(x => x.id === id);
+  placeDraft = p ? { id: p.id, name: p.name, kind: p.kind, radius: p.radius, loc: { lat: p.lat, lng: p.lng, acc: p.acc || 0 }, status: 'ok' }
+    : { id: null, name: '', kind: 'casa', radius: 150, loc: presetLoc || null, status: presetLoc ? 'ok' : 'locating' };
+  placeDraft.onUpdate = () => { const el = $('#pl-loc'); if (el) el.innerHTML = placeLocHtml(); const b = $('#pl-save'); if (b) b.disabled = !placeDraft.loc; };
+  if (!placeDraft.loc) getPosition().then(loc => { if (!placeDraft) return; placeDraft.loc = loc; placeDraft.status = 'ok'; placeDraft.onUpdate(); },
+    e => { if (!placeDraft) return; placeDraft.status = 'error'; placeDraft.error = geoErrMsg(e); placeDraft.onUpdate(); });
+  openSheet(p ? 'Editar local' : 'Novo local', placeBody);
+  sheetCleanup = () => { placeDraft = null; };
+}
+function placeLocHtml() {
+  const d = placeDraft;
+  if (d.status === 'locating') return `${ico('locate', 17)}<span class="muted">Pegando sua localização…</span>`;
+  if (d.status === 'error') return `${ico('semloc', 17)}<span class="muted">${esc(d.error)}</span>`;
+  return `${ico('outro', 17)}<span class="num">${d.loc.lat.toFixed(5)}, ${d.loc.lng.toFixed(5)}${d.loc.acc ? `<br><span class="muted small">precisão ± ${d.loc.acc} m</span>` : ''}</span>`;
+}
+function placeBody() {
+  const d = placeDraft;
+  return `<form data-form="place" class="stack" autocomplete="off">
+    <label class="field"><span>Nome</span><input id="pl-name" class="input" data-pd="name" value="${esc(d.name)}" placeholder="Ex.: Casa, Hospital, Academia" required></label>
+    <div class="field"><span>Tipo</span><div class="kinds" role="group">${KINDS.map(([k, n]) => `<button type="button" data-act="pl-kind" data-k="${k}" aria-pressed="${d.kind === k}">${ico(k, 16)}${n}</button>`).join('')}</div></div>
+    <label class="field"><span>Raio (quão perto conta como "aqui")</span><select id="pl-radius" class="input" data-pd="radius">${[50, 100, 150, 300, 500, 1000].map(r => `<option value="${r}" ${+d.radius === r ? 'selected' : ''}>${r < 1000 ? r + ' m' : '1 km'}</option>`).join('')}</select></label>
+    <div class="meta"><div class="meta-row" id="pl-loc">${placeLocHtml()}</div></div>
+    ${d.id ? `<button type="button" class="btn" data-act="pl-relocate">${ico('locate', 17)} Usar onde estou agora</button>` : ''}
+    <p class="err" id="pl-err" hidden></p>
+    <button id="pl-save" class="btn primary block" type="submit" ${d.loc ? '' : 'disabled'}>Salvar local</button>
+    ${d.id ? `<button type="button" class="btn ghost" style="color:var(--bad)" data-act="pl-del" data-id="${d.id}">${ico('trash', 17)} Excluir local</button>` : ''}</form>`;
+}
+function relabel(p) {
+  let n = 0;
+  for (const w of S.weights) if (w.loc && !w.placeId && distM(w.loc, p) <= p.radius + Math.min(w.loc.acc || 0, 75)) { w.placeId = p.id; n++; }
+  return n;
+}
+async function savePlace() {
+  const d = placeDraft, err = $('#pl-err');
+  if (!d.name.trim()) { err.textContent = 'Dê um nome ao local.'; err.hidden = false; return; }
+  if (!d.loc) { err.textContent = 'Ainda sem localização.'; err.hidden = false; return; }
+  const obj = { id: d.id || uid(), name: d.name.trim(), kind: d.kind, radius: +d.radius, lat: d.loc.lat, lng: d.loc.lng, acc: d.loc.acc || 0 };
+  const i = S.places.findIndex(x => x.id === obj.id); if (i >= 0) S.places[i] = obj; else S.places.push(obj);
+  const n = relabel(obj); await save(); closeSheet(); render();
+  toast(n ? `Local salvo · ${n} ${n === 1 ? 'peso antigo marcado' : 'pesos antigos marcados'}` : 'Local salvo');
+}
+function viewAjustes() {
+  const counts = id => S.weights.filter(w => w.placeId === id).length;
+  return `<header class="page-head"><h1>Ajustes</h1></header>
+  <h2 class="sec">Locais salvos</h2>
+  <p class="muted small" style="margin:-8px 0 0">Registrou o peso perto de um desses lugares, o app põe o nome sozinho. Fora deles, ele usa o endereço do GPS.</p>
+  ${S.places.length ? `<ul class="list">${S.places.map(p => `<li><button class="row-btn" data-act="place-open" data-id="${p.id}"><span class="chip k-${p.kind}" style="padding:7px">${ico(p.kind, 18)}</span><div class="rb-main"><b>${esc(p.name)}</b><span class="muted small">raio ${p.radius} m · ${plural(counts(p.id), 'registro', 'registros')}</span></div>${ico('next', 16)}</button></li>`).join('')}</ul>` : `<div class="empty"><b>Nenhum local salvo</b>Vá até sua casa (ou hospital, academia…) e toque no botão abaixo.</div>`}
+  <button class="btn primary block" data-act="place-new">${ico('locate', 18)} Salvar onde estou agora</button>
+  <h2 class="sec">Hábitos</h2>
+  <button class="btn block" data-act="edit-tasks">${ico('edit', 17)} Editar lista de hábitos</button>
+  <h2 class="sec">Backup e exportação</h2>
+  <section class="card stack"><p style="margin:0">Seus dados ficam só neste aparelho, nada vai pra internet. Se apagar o app ou limpar os dados do Safari, perde tudo, então exporte um backup de vez em quando (vale ${XP.backup} XP por semana).</p>
+    <p class="muted small" style="margin:0">Último backup: ${S.meta.lastBackup ? fmtDate(S.meta.lastBackup) + ' às ' + fmtTime(S.meta.lastBackup) : 'nunca'} · <span id="persist-st">…</span></p>
+    <div class="row"><button class="btn primary" style="flex:1" data-act="export">${ico('share', 17)} Exportar</button><label class="btn" style="flex:1" for="import-file">Importar</label><input id="import-file" class="vh" type="file" accept="application/json,.json"></div>
+    <button class="btn" data-act="export-csv">${ico('note', 17)} Exportar registro diário (CSV)</button>
+    <p class="muted small" style="margin:0">O CSV sai com uma linha por dia (hábitos, energia, horários, gatilho), pronto pra abrir no Numbers ou Excel.</p></section>
+  <p class="muted small center">Prontuário de Bolso · v${APP_VERSION} · ${plural(S.weights.length, 'peso', 'pesos')} · ${plural(S.exams.length, 'exame', 'exames')} · ${plural(S.consults.length, 'consulta', 'consultas')}</p>`;
+}
+async function persistStatus() {
+  const el = $('#persist-st'); if (!el) return;
+  try { const p = await navigator.storage.persisted(); el.textContent = p ? 'armazenamento protegido' : 'armazenamento comum'; } catch (_) { el.textContent = ''; }
+}
+
+/* ---------- backup / exportação ---------- */
+const blobToB64 = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(b); });
+function b64ToBuf(b64) { const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; }
+async function shareOrDownload(file, title) {
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title }); return true; } catch (e) { if (e.name === 'AbortError') return false; }
+  }
+  const u = URL.createObjectURL(file); const a = document.createElement('a'); a.href = u; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000);
+  return true;
+}
+async function exportBackup() {
+  const files = [];
+  try { for (const k of await Store.keys('files')) { const f = await Store.get('files', k); if (f) files.push({ id: k, name: f.name, type: f.type, data: await blobToB64(new Blob([f.buf])) }); } } catch (_) {}
+  const now = new Date().toISOString(), before = computeGame();
+  const payload = { app: APP_ID, v: 2, exportedAt: now, state: { ...S, meta: { ...S.meta, lastBackup: now, backupLog: [...(S.meta.backupLog || []), now] } }, files };
+  const ok = await shareOrDownload(new File([JSON.stringify(payload)], `prontuario-backup-${dayKey()}.json`, { type: 'application/json' }), 'Backup do Prontuário');
+  if (!ok) return;
+  S.meta.lastBackup = now; S.meta.backupLog = [...(S.meta.backupLog || []), now]; await save(); render(); xpToast(before, 'Backup exportado');
+}
+async function exportCsv() {
+  const col = k => { const t = taskByKey(k); return d => t ? (isDone(d, t.id) ? 's' : 'n') : ''; };
+  const inv = k => { const t = taskByKey(k); return d => t ? (isDone(d, t.id) ? 'n' : 's') : ''; };
+  const days = [...new Set([...Object.keys(S.checks), ...Object.keys(S.journal)])].sort();
+  const q = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const head = `data,acordou_hora,banho_gelado,sol,cafe_com_proteina,movimento,${S.meta.csvFamCol || 'tempo_com_familia'},cama_de_dia,fap,gatilho,horario_do_gatilho,energia_0a10,dormiu_hora,obs`;
+  const rows = days.map(d => { const j = S.journal[d] || {};
+    return [d, j.wake, col('banho')(d), col('sol')(d), col('cafe')(d), col('movimento')(d), j.famMin, inv('cama')(d), inv('nofap')(d), j.trigger, j.triggerTime, j.energy, j.sleep, j.obs].map(q).join(','); });
+  await shareOrDownload(new File([[head, ...rows].join('\n') + '\n'], `registro-diario-${dayKey()}.csv`, { type: 'text/csv' }), 'Registro diário');
+}
+async function importBackup(file) {
+  let p; try { p = JSON.parse(await file.text()); } catch (_) { return toast('Esse arquivo não abriu.'); }
+  if (!p || p.app !== APP_ID || !p.state) return toast('Esse arquivo não é um backup do Prontuário.');
+  const st = p.state;
+  const n = `${plural((st.exams || []).length, 'exame', 'exames')}, ${plural((st.consults || []).length, 'consulta', 'consultas')} e ${plural((st.weights || []).length, 'peso', 'pesos')}`;
+  if (!await askConfirm(`O arquivo tem ${n}. Importar substitui tudo o que está neste aparelho agora.`, 'Substituir dados')) return;
+  try { await Store.clear('files'); for (const f of p.files || []) await Store.put('files', f.id, { buf: b64ToBuf(f.data), type: f.type, name: f.name }); } catch (_) {}
+  S = st; migrate(); await save(); UI.day = dayKey(); render(); toast('Dados importados');
+}
+
+/* ---------- XP feedback ---------- */
+function xpToast(before, msg) {
+  const after = computeGame(), gain = after.xp - before.xp;
+  const newBadges = after.badges.filter(b => b.got && !before.badges.find(x => x.id === b.id && x.got));
+  let html = esc(msg);
+  if (gain > 0) html += ` <span class="xp-chip">+${gain} XP</span>`;
+  if (after.lv.lvl > before.lv.lvl) html = `Subiu pro nível ${after.lv.lvl} · ${esc(after.lv.name)}! <span class="xp-chip">+${gain} XP</span>`;
+  else if (newBadges.length) html = `Conquista: ${esc(newBadges[0].name)} <span class="xp-chip">+${gain} XP</span>`;
+  toast(html, after.lv.lvl > before.lv.lvl || newBadges.length ? 3600 : 2200);
+}
+
+/* ---------- render ---------- */
+function render() {
+  const v = $('#view');
+  v.innerHTML = UI.tab === 'peso' ? viewPeso() : UI.tab === 'resultados' ? viewResultados() : UI.tab === 'saude' ? viewSaude() : UI.tab === 'ajustes' ? viewAjustes() : viewHoje();
+  document.querySelectorAll('.tabbar button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === UI.tab ? 'page' : 'false'));
+  if (UI.tab === 'ajustes') persistStatus();
+  if (weightEditId && sheetRender) refreshSheet();
+}
+
+/* ---------- events ---------- */
+const actions = {
+  'tab': el => { UI.tab = el.dataset.tab; if (UI.tab === 'hoje') UI.day = dayKey(); render(); window.scrollTo(0, 0); },
+  'sub': el => { UI.sub = el.dataset.v; render(); },
+  'close-sheet': () => closeSheet(),
+  'hide-install': async () => { S.meta.hideInstall = true; await save(); render(); },
+  'day-prev': () => { UI.day = addDays(UI.day, -1); render(); },
+  'day-next': () => { if (UI.day < dayKey()) { UI.day = addDays(UI.day, 1); render(); } },
+  'toggle': async el => {
+    const id = el.dataset.id, k = UI.day, before = computeGame(); S.checks[k] ||= {};
+    const was = !!S.checks[k][id];
+    if (was) delete S.checks[k][id]; else S.checks[k][id] = new Date().toISOString();
+    if (!Object.keys(S.checks[k]).length) delete S.checks[k];
+    await save(); render();
+    if (!was) { xpToast(before, dayComplete(k) ? 'Dia completo!' : 'Feito'); if (navigator.vibrate) try { navigator.vibrate(8); } catch (_) {} }
+  },
+  'energy': async el => {
+    const k = UI.day, v = +el.dataset.v, before = computeGame(); S.journal[k] ||= {};
+    if (S.journal[k].energy === v) delete S.journal[k].energy; else S.journal[k].energy = v;
+    await save(); render(); if (S.journal[k].energy != null) xpToast(before, `Energia ${v}/10 registrada`);
+  },
+  'journal-open': () => openJournal(),
+  'game-open': () => openGame(),
+  'edit-tasks': () => openEditTasks(),
+  'task-move': async el => {
+    const act = activeTasks(), i = act.findIndex(t => t.id === el.dataset.id), j = i + (+el.dataset.dir);
+    if (i < 0 || j < 0 || j >= act.length) return;
+    [act[i], act[j]] = [act[j], act[i]]; S.tasks = [...act, ...S.tasks.filter(t => !t.active)];
+    await save(); refreshSheet(); render();
+  },
+  'task-del': async el => {
+    const t = S.tasks.find(x => x.id === el.dataset.id); if (!t) return;
+    if (!await askConfirm(`Remover "${t.name}" da lista? O histórico fica guardado.`, 'Remover')) return;
+    t.active = false; await save(); refreshSheet(); render();
+  },
+  'weigh': () => openWeigh(),
+  'range': el => { UI.range = el.dataset.v; render(); },
+  'weight-open': el => openWeight(el.dataset.id),
+  'weight-del': async el => {
+    if (!await askConfirm('Excluir este registro de peso?', 'Excluir')) return;
+    S.weights = S.weights.filter(w => w.id !== el.dataset.id); await save(); closeSheet(); render(); toast('Registro excluído');
+  },
+  'place-from-weight': el => { const w = S.weights.find(x => x.id === el.dataset.id); if (w && w.loc) openPlaceForm(null, w.loc); },
+  'exam-new': () => openExamForm(null),
+  'exam-open': el => openExam(el.dataset.id),
+  'exam-edit': el => openExamForm(el.dataset.id),
+  'exam-del': async el => {
+    const e = S.exams.find(x => x.id === el.dataset.id); if (!e) return;
+    if (!await askConfirm('Excluir este exame e os arquivos anexados?', 'Excluir')) return;
+    for (const f of e.files || []) { try { await Store.del('files', f.id); } catch (_) {} }
+    S.exams = S.exams.filter(x => x.id !== e.id); await save(); closeSheet(); render(); toast('Exame excluído');
+  },
+  'consult-new': () => openConsultForm(null),
+  'consult-open': el => openConsult(el.dataset.id),
+  'consult-edit': el => openConsultForm(el.dataset.id),
+  'consult-del': async el => {
+    const c = S.consults.find(x => x.id === el.dataset.id); if (!c) return;
+    if (!await askConfirm('Excluir esta consulta e os anexos?', 'Excluir')) return;
+    for (const f of c.files || []) { try { await Store.del('files', f.id); } catch (_) {} }
+    S.consults = S.consults.filter(x => x.id !== c.id); await save(); closeSheet(); render(); toast('Consulta excluída');
+  },
+  'fd-here': async el => {
+    el.disabled = true; const t = startLocating({});
+    try { await t.promise; const p = placeOf({ ...t, locStatus: 'ok' }); FD[el.dataset.k] = p.name; FD.loc = t.loc; const i = $(el.dataset.k === 'lab' ? '#ex-lab' : '#cs-place'); if (i) i.value = p.name; }
+    catch (_) { toast(esc(t.error || 'Sem localização')); }
+    el.disabled = false;
+  },
+  'mk-add': () => { FD.markers.push(newMarker()); refreshSheet(); const last = FD.markers[FD.markers.length - 1]; const i = $('#mk-n-' + last.id); i && i.focus(); },
+  'mk-del': el => { FD.markers = FD.markers.filter(m => m.id !== el.dataset.id); refreshSheet(); },
+  'fd-del-new': el => { FD.newFiles.splice(+el.dataset.i, 1); refreshSheet(); },
+  'fd-del-old': el => { const [f] = FD.files.splice(+el.dataset.i, 1); if (f) FD.removed.push(f); refreshSheet(); },
+  'mk-open': el => openMarker(el.dataset.key),
+  'file-open': el => openFile(el.dataset.id),
+  'viewer-close': () => { const r = $('#viewer-root'); if (r._url) URL.revokeObjectURL(r._url); r._url = null; r.hidden = true; r.innerHTML = ''; document.body.classList.toggle('locked', !$('#sheet-root').hidden); },
+  'file-share': async el => { const f = await fileBlob(el.dataset.id); if (f) shareFile(f); },
+  'cat': el => { UI.cat = el.dataset.v; render(); },
+  'place-new': () => openPlaceForm(null),
+  'place-open': el => openPlaceForm(el.dataset.id),
+  'pl-kind': el => { placeDraft.kind = el.dataset.k; document.querySelectorAll('[data-act="pl-kind"]').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === placeDraft.kind)); },
+  'pl-relocate': () => { placeDraft.status = 'locating'; placeDraft.onUpdate(); getPosition().then(loc => { placeDraft.loc = loc; placeDraft.status = 'ok'; placeDraft.onUpdate(); }, e => { placeDraft.status = 'error'; placeDraft.error = geoErrMsg(e); placeDraft.onUpdate(); }); },
+  'pl-del': async el => {
+    const p = S.places.find(x => x.id === el.dataset.id); if (!p) return;
+    if (!await askConfirm(`Excluir o local "${p.name}"? Os registros antigos continuam com esse nome.`, 'Excluir')) return;
+    for (const w of S.weights) if (w.placeId === p.id) { w.placeId = null; w.label = p.name; w.kind = p.kind; }
+    S.places = S.places.filter(x => x.id !== p.id); await save(); closeSheet(); render();
+  },
+  'export': () => exportBackup(),
+  'export-csv': () => exportCsv(),
+  'demo-load': () => loadDemo(),
+  'demo-reset': async () => {
+    if (!await askConfirm('Apagar todos os dados desta prévia?', 'Zerar')) return;
+    try { await Store.clear('files'); } catch (_) {}
+    S = freshState(); await save(); UI.day = dayKey(); render(); toast('Prévia zerada');
+  }
+};
+async function loadDemo() {
+  const isDemo = x => String(x.id).startsWith('demo-');
+  S.weights = S.weights.filter(w => !isDemo(w)); S.exams = S.exams.filter(e => !isDemo(e)); S.places = S.places.filter(p => !isDemo(p)); S.consults = S.consults.filter(c => !isDemo(c));
+  const home = { id: 'demo-casa', name: 'Casa (exemplo)', kind: 'casa', radius: 150, lat: -23.5505, lng: -46.6333, acc: 10 };
+  const hosp = { id: 'demo-hosp', name: 'Hospital (exemplo)', kind: 'saude', radius: 200, lat: -23.5570, lng: -46.6690, acc: 10 };
+  S.places.push(home, hosp);
+  const base = Date.now(), vals = [86.1, 85.8, 85.9, 85.2, 84.9, 84.6, 84.8, 84.1, 83.7, 83.9, 83.2, 82.9];
+  vals.forEach((v, i) => { const p = i % 4 === 0 ? hosp : home;
+    S.weights.push({ id: 'demo-w' + i, kg: v, ts: new Date(base - (84 - i * 7) * 864e5 - 3 * 36e5).toISOString(), loc: { lat: p.lat, lng: p.lng, acc: 14 }, placeId: p.id, label: null, address: null, kind: null, locStatus: 'ok' }); });
+  const mk = (id, name, raw, unit, a, b) => ({ id, name, raw, num: parseNum(raw), unit, refMin: a, refMax: b });
+  S.exams.push(
+    { id: 'demo-e1', date: addDays(dayKey(), -20), title: 'Exame de sangue (exemplo)', lab: 'Laboratório (exemplo)', notes: 'Jejum de 12h.', loc: null, created: new Date().toISOString(), files: [],
+      markers: [mk('d1', 'Glicose em jejum', '104', 'mg/dL', 70, 99), mk('d2', 'Vitamina D (25-OH)', '28,5', 'ng/mL', 30, 100), mk('d3', 'LDL', '118', 'mg/dL', null, 130), mk('d4', 'Hemoglobina', '15,1', 'g/dL', 13.5, 17.5)] },
+    { id: 'demo-e2', date: addDays(dayKey(), -200), title: 'Check-up (exemplo)', lab: 'Laboratório (exemplo)', notes: '', loc: null, created: new Date().toISOString(), files: [],
+      markers: [mk('d5', 'Glicose em jejum', '96', 'mg/dL', 70, 99), mk('d6', 'Vitamina D (25-OH)', '22', 'ng/mL', 30, 100), mk('d7', 'LDL', '139', 'mg/dL', null, 130), mk('d8', 'Hemoglobina', '14,8', 'g/dL', 13.5, 17.5)] });
+  S.consults.push({ id: 'demo-c1', date: addDays(dayKey(), -15), time: '09:30', specialty: 'Clínico geral (exemplo)', doctor: 'Dr. Exemplo', place: 'Clínica (exemplo)', reason: 'Cansaço e check-up', notes: 'Pediu exames de sangue e retorno com resultado.', returnDate: addDays(dayKey(), 12), files: [], created: new Date().toISOString() });
+  const ts = activeTasks();
+  for (let i = 12; i >= 1; i--) { const d = addDays(dayKey(), -i); S.checks[d] = {}; ts.forEach((t, n) => { if ((i + n) % 4 !== 0 || i < 5) S.checks[d][t.id] = new Date(parseDay(d).getTime() + 9 * 36e5).toISOString(); }); S.journal[d] = { energy: 4 + ((i * 7) % 6) }; }
+  S.meta.start = addDays(dayKey(), -12);
+  if (!S.profile.blood) S.profile.blood = 'O+ (exemplo)';
+  await save(); render(); toast('Exemplo carregado. Veja Peso, Saúde e o card de nível.');
+}
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
+  if (el.tagName !== 'A') e.preventDefault();
+  const f = actions[el.dataset.act]; if (f) f(el, e);
+});
+const forms = {
+  'weigh': () => saveWeigh(),
+  'fd': () => saveForm(),
+  'place': () => savePlace(),
+  'task-add': async () => { const i = $('#tk-new'); const n = i.value.trim(); if (!n) return; S.tasks.push({ id: uid(), name: n, active: true }); const act = activeTasks(); S.tasks = [...act, ...S.tasks.filter(t => !t.active)]; await save(); refreshSheet(); render(); const ni = $('#tk-new'); ni && ni.focus(); },
+  'weight-edit': async () => {
+    const w = S.weights.find(x => x.id === weightEditId); const kg = parseNum($('#we-kg').value);
+    if (!w) return; if (!(kg >= 20 && kg <= 350)) return toast('Peso inválido');
+    w.kg = Math.round(kg * 10) / 10; await save(); render(); toast('Peso atualizado');
+  }
+};
+document.addEventListener('submit', e => { const f = e.target.closest('[data-form]'); if (!f) return; e.preventDefault(); const fn = forms[f.dataset.form]; if (fn) fn(f); });
+let jrTimer = null, pfTimer = null;
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.draft && FD) FD[t.dataset.draft] = t.value;
+  if (t.dataset.mk && FD) {
+    const m = FD.markers.find(x => x.id === t.dataset.mk); if (!m) return; m[t.dataset.f] = t.value;
+    if (t.dataset.f === 'name' && !m.unit) { const u = presetUnit(t.value); if (u) { m.unit = u; const ui = $('#mk-u-' + m.id); if (ui) ui.value = u; } }
+  }
+  if (t.dataset.pd && placeDraft) placeDraft[t.dataset.pd] = t.value;
+  if (t.dataset.jr) {
+    const k = UI.day; S.journal[k] ||= {}; const f = t.dataset.jr;
+    if (f === 'famMin') { const n = parseNum(t.value); if (isNaN(n)) delete S.journal[k].famMin; else S.journal[k].famMin = n; }
+    else if (t.value) S.journal[k][f] = t.value; else delete S.journal[k][f];
+    clearTimeout(jrTimer); jrTimer = setTimeout(save, 400);
+  }
+  if (t.dataset.pf) { S.profile[t.dataset.pf] = t.value; clearTimeout(pfTimer); pfTimer = setTimeout(save, 400); }
+  if (t.id === 'kg-input') { const er = $('#weigh-err'); if (er) er.hidden = true; }
+});
+document.addEventListener('change', async e => {
+  const t = e.target;
+  if (t.dataset.taskName) { const task = S.tasks.find(x => x.id === t.dataset.taskName); const n = t.value.trim(); if (task && n) { task.name = n; await save(); render(); } }
+  if (t.dataset.weightPlace) { const w = S.weights.find(x => x.id === t.dataset.weightPlace); if (w) { w.placeId = t.value || null; await save(); render(); } }
+  if (t.dataset.pf) { await save(); if (UI.tab === 'saude') { const top = document.querySelector('.ficha-top'); if (top) { const p = S.profile; top.querySelectorAll('b')[0].textContent = p.blood || '—'; top.querySelectorAll('b')[1].textContent = p.vision || '—'; } } }
+  if (t.dataset.jr) { await save(); render(); }
+  if (t.id === 'fd-files' && FD) { FD.newFiles.push(...t.files); refreshSheet(); }
+  if (t.id === 'import-file' && t.files[0]) { await importBackup(t.files[0]); t.value = ''; }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('#viewer-root').hidden) actions['viewer-close'](); else closeSheet(); } });
+if (window.visualViewport) { visualViewport.addEventListener('resize', syncViewport); visualViewport.addEventListener('scroll', syncViewport); }
+window.addEventListener('online', () => resolveMissingLabels());
+document.addEventListener('visibilitychange', () => { if (!document.hidden && UI.tab === 'hoje' && UI.day !== dayKey() && !sheetRender) { UI.day = dayKey(); render(); } });
+
+/* ---------- boot ---------- */
+(async function boot() {
+  syncViewport();
+  await load();
+  render();
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (_) {}
+  if (!PREVIEW && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+  setTimeout(resolveMissingLabels, 1500);
+})();
+</script>
+
+</body>
+</html>
