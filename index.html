@@ -341,7 +341,7 @@ details summary{cursor:pointer;color:var(--accent);font-weight:650}
 <script>
 'use strict';
 const APP_ID = 'prontuario-de-bolso';
-const APP_VERSION = '3.0';
+const APP_VERSION = '3.1';
 const PREVIEW = !!window.PREVIEW_MODE;
 
 /* ---------- utils ---------- */
@@ -785,7 +785,7 @@ function viewHoje() {
   const ret = nextReturn();
   const retBanner = ret && daysBetween(today, ret.returnDate) <= 30 ? `<button class="quick" data-act="consult-open" data-id="${ret.id}"><span class="q-ico">${ico('steth', 20)}</span><span class="q-txt"><b>Retorno ${ret.specialty ? 'de ' + esc(ret.specialty) : ''}</b><span class="muted small">${fmtDK(ret.returnDate)} · ${daysBetween(today, ret.returnDate) === 0 ? 'hoje' : 'em ' + plural(daysBetween(today, ret.returnDate), 'dia', 'dias')}</span></span>${ico('next', 18)}</button>` : '';
   const pctLv = Math.round((G.xp - lv.base) / (lv.next - lv.base) * 100);
-  return `${banner}${vaultBanner}
+  return `${updBanner()}${banner}${vaultBanner}
   <section class="day-head">
     <button class="icon-btn soft" data-act="day-prev" aria-label="Dia anterior">${ico('prev', 20, 2.2)}</button>
     <div class="day-title"><span class="eyebrow">${eyebrow}</span><h1>${esc(fmtDayLong(k))}</h1></div>
@@ -1335,6 +1335,7 @@ async function savePlace() {
 function viewAjustes() {
   const counts = id => S.weights.filter(w => w.placeId === id).length;
   return `<header class="page-head"><h1>Ajustes</h1></header>
+  ${updBanner()}
   ${vaultCard()}
   <h2 class="sec">Locais salvos</h2>
   <p class="muted small" style="margin:-8px 0 0">Registrou o peso perto de um desses lugares, o app põe o nome sozinho. Fora deles, ele usa o endereço do GPS.</p>
@@ -1348,6 +1349,7 @@ function viewAjustes() {
     <div class="row"><button class="btn primary" style="flex:1" data-act="export">${ico('share', 17)} Exportar</button><label class="btn" style="flex:1" for="import-file">Importar</label><input id="import-file" class="vh" type="file" accept="application/json,.json"></div>
     <button class="btn" data-act="export-csv">${ico('note', 17)} Exportar registro diário (CSV)</button>
     <p class="muted small" style="margin:0">O CSV sai com uma linha por dia (hábitos, energia, horários, gatilho), pronto pra abrir no Numbers ou Excel.</p></section>
+  <button class="btn block" data-act="app-check">${ico('refresh', 17)} Procurar atualização do app</button>
   <p class="muted small center">Prontuário de Bolso · v${APP_VERSION} · ${plural(S.weights.length, 'peso', 'pesos')} · ${plural(S.exams.length, 'exame', 'exames')} · ${plural(S.consults.length, 'consulta', 'consultas')}</p>`;
 }
 async function persistStatus() {
@@ -1727,6 +1729,31 @@ function vaultCard() {
     <button class="btn ghost" style="color:var(--bad)" data-act="vault-off">Desconectar deste aparelho</button></section>`;
 }
 
+/* ---------- atualização do app ---------- */
+const Upd = { info: null, lastCheck: 0, busy: false };
+const verNum = v => String(v || '0').split('.').map(n => parseInt(n, 10) || 0);
+function isNewer(a, b) { const x = verNum(a), y = verNum(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; }
+async function checkUpdate(manual) {
+  if (PREVIEW || !navigator.onLine) { if (manual) toast('Sem internet agora.'); return; }
+  Upd.lastCheck = Date.now();
+  try {
+    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('http ' + r.status);
+    const j = await r.json();
+    if (isNewer(j.version, APP_VERSION)) { Upd.info = j; if (UI.tab === 'hoje' || UI.tab === 'ajustes') render(); if (manual) toast(`Versão ${esc(j.version)} disponível`); }
+    else { Upd.info = null; if (manual) toast(`Você já está na versão mais nova (${APP_VERSION})`); }
+  } catch (_) { if (manual) toast('Não consegui verificar agora.'); }
+}
+async function applyUpdate() {
+  if (Upd.busy) return; Upd.busy = true; toast('Atualizando…', 6000);
+  try {
+    if ('serviceWorker' in navigator) { const reg = await navigator.serviceWorker.getRegistration(); if (reg) { try { await reg.update(); } catch (_) {} if (reg.waiting) reg.waiting.postMessage('skip'); } }
+    if (window.caches) { for (const k of await caches.keys()) await caches.delete(k); }
+  } catch (_) {}
+  location.reload();
+}
+const updBanner = () => Upd.info ? `<button class="banner" style="border:0;text-align:left;width:100%;background:var(--gold-soft)" data-act="app-update"><p><b>Nova versão ${esc(Upd.info.version)} do app.</b> ${Upd.info.notes ? esc(Upd.info.notes) + ' ' : ''}Toque pra atualizar (seus dados não mudam).</p></button>` : '';
+
 /* ---------- render ---------- */
 function render() {
   const v = $('#view');
@@ -1824,6 +1851,8 @@ const actions = {
     tomb(p.id); S.places = S.places.filter(x => x.id !== p.id); await save(); closeSheet(); render();
   },
   'export': () => exportBackup(),
+  'app-update': () => applyUpdate(),
+  'app-check': () => checkUpdate(true),
   'vault-setup': () => openVaultSetup(),
   'vault-sync': async () => { await Vault.sync(); toast(Vault.cfg && Vault.cfg.error ? esc(Vault.cfg.error) : 'Cofre sincronizado'); },
   'vault-versions': () => openVersions(),
@@ -1917,6 +1946,7 @@ document.addEventListener('visibilitychange', () => {
   if (Vault.cfg && !Vault.locked && Vault.hiddenAt && Date.now() - Vault.hiddenAt > 180000) showLock(Vault.key ? 'pin' : 'password');
   if (UI.tab === 'hoje' && UI.day !== dayKey() && !sheetRender) { UI.day = dayKey(); render(); }
   if (Vault.cfg && Date.now() - Date.parse(Vault.cfg.lastSync || 0) > 60000) Vault.schedule(600);
+  if (Date.now() - Upd.lastCheck > 30 * 60000) checkUpdate(false);
 });
 
 /* ---------- boot ---------- */
@@ -1932,6 +1962,7 @@ document.addEventListener('visibilitychange', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
   setTimeout(resolveMissingLabels, 1500);
+  setTimeout(() => checkUpdate(false), 2500);
 })();
 </script>
 
