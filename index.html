@@ -393,7 +393,7 @@ details summary{cursor:pointer;color:var(--accent);font-weight:650}
 <script>
 'use strict';
 const APP_ID = 'prontuario-de-bolso';
-const APP_VERSION = '3.4';
+const APP_VERSION = '3.5';
 const PREVIEW = !!window.PREVIEW_MODE;
 
 /* ---------- utils ---------- */
@@ -2246,6 +2246,12 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('#v
 if (window.visualViewport) { visualViewport.addEventListener('resize', syncViewport); visualViewport.addEventListener('scroll', syncViewport); }
 window.addEventListener('online', () => { resolveMissingLabels(); Vault.schedule(500); });
 window.addEventListener('pagehide', () => { if (!Vault.locked) Lock.touch(); });
+// com o app aberto: busca novidades do cofre/caixa de entrada a cada 90 s e versão nova a cada 30 min
+setInterval(() => {
+  if (document.hidden || PREVIEW) return;
+  if (Vault.cfg && Vault.key && !Vault.locked && !Vault.running && Date.now() - Date.parse(Vault.cfg.lastSync || 0) > 85000) Vault.schedule(100);
+  if (Date.now() - Upd.lastCheck > 30 * 60000) checkUpdate(false);
+}, 90000);
 document.addEventListener('toggle', e => { if (e.target.matches && e.target.matches('[data-done-box]')) UI.showDone = e.target.open; }, true);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { Vault.hiddenAt = Date.now(); if (!Vault.locked) Lock.touch(); return; }

@@ -1,5 +1,5 @@
 {
-  "version": "3.4",
+  "version": "3.5",
   "date": "2026-09-28",
-  "notes": "Caixa de entrada: o que você mandar pro Claude (exame, peso, consulta) entra no app sozinho. E o app passa a se atualizar sozinho."
+  "notes": "Com o app aberto, o que o Claude mandar chega sozinho em até 2 minutos."
 }
