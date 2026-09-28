@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Prontuário">
 <meta name="format-detection" content="telephone=no">
+<meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#EEF3F3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B1616" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -307,6 +308,19 @@ select.input{background-image:linear-gradient(45deg,transparent 50%,var(--muted)
 .pdfv-pages{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:8px 8px calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;gap:8px;align-items:center}
 .pdfv-pages canvas{width:100%;max-width:900px;height:auto;background:#fff;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.18)}
 .pdfv-frame{width:100%;flex:1;min-height:70vh;border:0;background:#fff}
+
+/* v3: cofre e bloqueio */
+#lock-root{position:fixed;inset:0;z-index:55}
+.lock{position:absolute;inset:0;background:var(--bg);display:grid;place-items:center;padding:24px 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
+.lock-box{width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px;text-align:center}
+.lock-box h1{font-size:26px}
+.lock-box p{margin:0}
+.lock-ico{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;margin:0 auto;color:#fff;background:linear-gradient(135deg,var(--accent),var(--gold))}
+.lock-input{text-align:center;font-size:24px;letter-spacing:.25em}
+[data-vault-status].bad{color:var(--bad);font-weight:650}
+.confirm b{font-size:17px}
+.confirm .input{background:var(--bg)}
+details summary{cursor:pointer;color:var(--accent);font-weight:650}
 </style>
 </head>
 <body>
@@ -321,12 +335,13 @@ select.input{background-image:linear-gradient(45deg,transparent 50%,var(--muted)
 <div id="sheet-root" hidden></div>
 <div id="confirm-root" hidden></div>
 <div id="viewer-root" hidden></div>
+<div id="lock-root" hidden></div>
 <div id="toast" role="status" hidden></div>
 
 <script>
 'use strict';
 const APP_ID = 'prontuario-de-bolso';
-const APP_VERSION = '2.0';
+const APP_VERSION = '3.0';
 const PREVIEW = !!window.PREVIEW_MODE;
 
 /* ---------- utils ---------- */
@@ -478,9 +493,11 @@ async function load() {
   if (!S) { S = freshState(); await save(); }
   migrate();
 }
-async function save() {
+async function save(opts = {}) {
+  if (!opts.silent && S.meta) S.meta.updatedAt = new Date().toISOString();
   try { await Store.put('kv', 'state', S); }
   catch (e) { try { localStorage.setItem('prontuario-state', JSON.stringify(S)); } catch (_) { toast('Não consegui salvar neste aparelho. Exporte um backup.'); } }
+  if (!opts.silent && typeof Vault !== 'undefined' && Vault.cfg) Vault.schedule();
 }
 
 /* ---------- geolocation ---------- */
@@ -757,6 +774,10 @@ function viewHoje() {
   const last7 = Array.from({ length: 7 }, (_, i) => addDays(k, i - 6));
   const lastW = weightsDesc()[0], j = S.journal[k] || {};
   const eyebrow = k === today ? 'Hoje' : k === addDays(today, -1) ? 'Ontem' : 'Dia anterior';
+  const lastBk = S.meta.lastBackup ? daysBetween(dayKey(new Date(S.meta.lastBackup)), today) : 999;
+  const vaultBanner = PREVIEW ? '' : Vault.cfg && Vault.cfg.error ? `<button class="banner" style="border:0;text-align:left;width:100%;background:var(--bad-soft)" data-act="go-vault"><p><b>Cofre:</b> ${esc(Vault.cfg.error)}</p></button>`
+    : !Vault.cfg ? `<button class="banner" style="border:0;text-align:left;width:100%" data-act="go-vault"><p><b>Seus dados estão só neste aparelho.</b> Toque pra ligar o cofre na nuvem (criptografado, iPhone + Mac).</p></button>`
+    : lastBk > 30 ? `<button class="banner" style="border:0;text-align:left;width:100%" data-act="go-vault"><p><b>Cópia extra do mês:</b> Ajustes › Exportar › salvar no iCloud Drive.</p></button>` : '';
   const banner = PREVIEW
     ? `<div class="banner" role="note"><p><b>Prévia de teste.</b> Aqui não funcionam GPS, instalar e exportar backup; no app publicado funcionam. <span class="row" style="margin-top:8px"><button class="btn small" data-act="demo-load">Carregar exemplo</button><button class="btn small" data-act="demo-reset">Zerar tudo</button></span></p></div>`
     : isIOS() && !isStandalone() && !S.meta.hideInstall
@@ -764,7 +785,7 @@ function viewHoje() {
   const ret = nextReturn();
   const retBanner = ret && daysBetween(today, ret.returnDate) <= 30 ? `<button class="quick" data-act="consult-open" data-id="${ret.id}"><span class="q-ico">${ico('steth', 20)}</span><span class="q-txt"><b>Retorno ${ret.specialty ? 'de ' + esc(ret.specialty) : ''}</b><span class="muted small">${fmtDK(ret.returnDate)} · ${daysBetween(today, ret.returnDate) === 0 ? 'hoje' : 'em ' + plural(daysBetween(today, ret.returnDate), 'dia', 'dias')}</span></span>${ico('next', 18)}</button>` : '';
   const pctLv = Math.round((G.xp - lv.base) / (lv.next - lv.base) * 100);
-  return `${banner}
+  return `${banner}${vaultBanner}
   <section class="day-head">
     <button class="icon-btn soft" data-act="day-prev" aria-label="Dia anterior">${ico('prev', 20, 2.2)}</button>
     <div class="day-title"><span class="eyebrow">${eyebrow}</span><h1>${esc(fmtDayLong(k))}</h1></div>
@@ -1314,6 +1335,7 @@ async function savePlace() {
 function viewAjustes() {
   const counts = id => S.weights.filter(w => w.placeId === id).length;
   return `<header class="page-head"><h1>Ajustes</h1></header>
+  ${vaultCard()}
   <h2 class="sec">Locais salvos</h2>
   <p class="muted small" style="margin:-8px 0 0">Registrou o peso perto de um desses lugares, o app põe o nome sozinho. Fora deles, ele usa o endereço do GPS.</p>
   ${S.places.length ? `<ul class="list">${S.places.map(p => `<li><button class="row-btn" data-act="place-open" data-id="${p.id}"><span class="chip k-${p.kind}" style="padding:7px">${ico(p.kind, 18)}</span><div class="rb-main"><b>${esc(p.name)}</b><span class="muted small">raio ${p.radius} m · ${plural(counts(p.id), 'registro', 'registros')}</span></div>${ico('next', 16)}</button></li>`).join('')}</ul>` : `<div class="empty"><b>Nenhum local salvo</b>Vá até sua casa (ou hospital, academia…) e toque no botão abaixo.</div>`}
@@ -1321,7 +1343,7 @@ function viewAjustes() {
   <h2 class="sec">Hábitos</h2>
   <button class="btn block" data-act="edit-tasks">${ico('edit', 17)} Editar lista de hábitos</button>
   <h2 class="sec">Backup e exportação</h2>
-  <section class="card stack"><p style="margin:0">Seus dados ficam só neste aparelho, nada vai pra internet. Se apagar o app ou limpar os dados do Safari, perde tudo, então exporte um backup de vez em quando (vale ${XP.backup} XP por semana).</p>
+  <section class="card stack"><p style="margin:0">${Vault.cfg ? 'Cópia extra, além do cofre: exporte uma vez por mês e salve no iCloud Drive (Salvar em Arquivos › iCloud Drive). Com o cofre ligado, o arquivo sai criptografado.' : 'Sem o cofre, seus dados ficam só neste aparelho: se apagar o app ou limpar o Safari, perde tudo. Exporte um backup de vez em quando e salve no iCloud Drive.'} (vale ${XP.backup} XP por semana)</p>
     <p class="muted small" style="margin:0">Último backup: ${S.meta.lastBackup ? fmtDate(S.meta.lastBackup) + ' às ' + fmtTime(S.meta.lastBackup) : 'nunca'} · <span id="persist-st">…</span></p>
     <div class="row"><button class="btn primary" style="flex:1" data-act="export">${ico('share', 17)} Exportar</button><label class="btn" style="flex:1" for="import-file">Importar</label><input id="import-file" class="vh" type="file" accept="application/json,.json"></div>
     <button class="btn" data-act="export-csv">${ico('note', 17)} Exportar registro diário (CSV)</button>
@@ -1348,7 +1370,9 @@ async function exportBackup() {
   try { for (const k of await Store.keys('files')) { const f = await Store.get('files', k); if (f) files.push({ id: k, name: f.name, type: f.type, data: await blobToB64(new Blob([f.buf])) }); } } catch (_) {}
   const now = new Date().toISOString(), before = computeGame();
   const payload = { app: APP_ID, v: 2, exportedAt: now, state: { ...S, meta: { ...S.meta, lastBackup: now, backupLog: [...(S.meta.backupLog || []), now] } }, files };
-  const ok = await shareOrDownload(new File([JSON.stringify(payload)], `prontuario-backup-${dayKey()}.json`, { type: 'application/json' }), 'Backup do Prontuário');
+  let out = payload, fname = `prontuario-backup-${dayKey()}.json`;
+  if (Vault.key && Vault.cfg) { out = { app: APP_ID, kind: 'backup-enc', v: 3, exportedAt: now, kdf: { name: 'PBKDF2-SHA256', iter: Vault.cfg.iter, salt: Vault.cfg.salt }, data: b64(await encBytes(Vault.key, TE.encode(JSON.stringify(payload)))) }; fname = `prontuario-backup-${dayKey()}-criptografado.json`; }
+  const ok = await shareOrDownload(new File([JSON.stringify(out)], fname, { type: 'application/json' }), 'Backup do Prontuário');
   if (!ok) return;
   S.meta.lastBackup = now; S.meta.backupLog = [...(S.meta.backupLog || []), now]; await save(); render(); xpToast(before, 'Backup exportado');
 }
@@ -1364,6 +1388,11 @@ async function exportCsv() {
 }
 async function importBackup(file) {
   let p; try { p = JSON.parse(await file.text()); } catch (_) { return toast('Esse arquivo não abriu.'); }
+  if (p && p.app === APP_ID && p.kind === 'backup-enc') {
+    const pass = await askSecret('Senha do backup', 'Esse backup está criptografado. Digite a senha do cofre usada quando ele foi feito.', { okLabel: 'Abrir' });
+    if (!pass) return;
+    try { const k = await deriveKey(pass, unb64(p.kdf.salt), p.kdf.iter); p = JSON.parse(TD.decode(await decBytes(k, unb64(p.data)))); } catch (_) { return toast('Senha errada pra esse backup.'); }
+  }
   if (!p || p.app !== APP_ID || !p.state) return toast('Esse arquivo não é um backup do Prontuário.');
   const st = p.state;
   const n = `${plural((st.exams || []).length, 'exame', 'exames')}, ${plural((st.consults || []).length, 'consulta', 'consultas')} e ${plural((st.weights || []).length, 'peso', 'pesos')}`;
@@ -1381,6 +1410,321 @@ function xpToast(before, msg) {
   if (after.lv.lvl > before.lv.lvl) html = `Subiu pro nível ${after.lv.lvl} · ${esc(after.lv.name)}! <span class="xp-chip">+${gain} XP</span>`;
   else if (newBadges.length) html = `Conquista: ${esc(newBadges[0].name)} <span class="xp-chip">+${gain} XP</span>`;
   toast(html, after.lv.lvl > before.lv.lvl || newBadges.length ? 3600 : 2200);
+}
+
+
+/* ---------- cofre: criptografia + sincronização no GitHub privado ---------- */
+const TE = new TextEncoder(), TD = new TextDecoder();
+function b64(buf) { const u = buf instanceof Uint8Array ? buf : new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
+function unb64(s) { const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+async function sha256hex(str) { const h = await crypto.subtle.digest('SHA-256', TE.encode(str)); return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+async function deriveKey(pass, salt, iter) {
+  const base = await crypto.subtle.importKey('raw', TE.encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function pinHash(pin, salt) {
+  const base = await crypto.subtle.importKey('raw', TE.encode(pin), 'PBKDF2', false, ['deriveBits']);
+  return b64(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' }, base, 256));
+}
+async function encBytes(key, bytes) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes));
+  const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12); return out;
+}
+async function decBytes(key, data) { const u = data instanceof Uint8Array ? data : new Uint8Array(data); return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.slice(0, 12) }, key, u.slice(12))); }
+const KDF_ITER = 600000;
+const deviceName = () => { const u = navigator.userAgent; return /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Macintosh/.test(u) ? 'Mac' : /Windows/.test(u) ? 'PC' : 'navegador'; };
+
+const GH = {
+  cfg: null,
+  async req(path, opts = {}) {
+    const headers = { 'Authorization': 'Bearer ' + this.cfg.token, 'Accept': opts.accept || 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    if (opts.body) headers['Content-Type'] = 'application/json';
+    const r = await fetch('https://api.github.com' + path, { method: opts.method || 'GET', headers, body: opts.body, cache: 'no-store' });
+    if (r.status === 401) throw Object.assign(new Error('auth'), { code: 'auth' });
+    if (r.status === 403 && r.headers.get('x-ratelimit-remaining') !== '0') throw Object.assign(new Error('auth'), { code: 'auth' });
+    return r;
+  },
+  base() { return '/repos/' + this.cfg.repo; },
+  async repoInfo() { const r = await this.req(this.base()); if (r.status === 404) throw Object.assign(new Error('notfound'), { code: 'notfound' }); if (!r.ok) throw new Error('repo ' + r.status); return r.json(); },
+  async list(dir) { const r = await this.req(`${this.base()}/contents/${dir}`); if (r.status === 404) return []; if (!r.ok) throw new Error('list ' + r.status); const j = await r.json(); return Array.isArray(j) ? j : []; },
+  async raw(path, ref) { const r = await this.req(`${this.base()}/contents/${path}${ref ? '?ref=' + ref : ''}`, { accept: 'application/vnd.github.raw+json' }); if (r.status === 404) return null; if (!r.ok) throw new Error('get ' + r.status); return new Uint8Array(await r.arrayBuffer()); },
+  async put(path, bytes, sha, message) {
+    const body = { message, content: b64(bytes) }; if (sha) body.sha = sha;
+    const r = await this.req(`${this.base()}/contents/${path}`, { method: 'PUT', body: JSON.stringify(body) });
+    if (r.status === 409 || r.status === 422) throw Object.assign(new Error('conflict'), { code: 'conflict' });
+    if (!r.ok) throw new Error('put ' + r.status);
+    return (await r.json()).content.sha;
+  },
+  async commits(path) { const r = await this.req(`${this.base()}/commits?path=${encodeURIComponent(path)}&per_page=40`); if (!r.ok) throw new Error('commits ' + r.status); return r.json(); }
+};
+
+function isVirgin(st) { return !st || (!(st.exams || []).length && !(st.weights || []).length && !(st.consults || []).length && !Object.keys(st.checks || {}).length && !Object.keys(st.journal || {}).length); }
+function fileRefs(st) { const out = new Map(); for (const x of [...(st.exams || []), ...(st.consults || [])]) for (const f of x.files || []) out.set(f.id, f); return [...out.values()]; }
+function mergeStates(a, b) {
+  if (!a) return b; if (!b) return a;
+  const N = ((a.meta && a.meta.updatedAt) || '') >= ((b.meta && b.meta.updatedAt) || '') ? a : b, O = N === a ? b : a;
+  const del = { ...((O.meta && O.meta.deleted) || {}), ...((N.meta && N.meta.deleted) || {}) };
+  const byId = (n, o) => { const m = new Map(); for (const it of o || []) m.set(it.id, it); for (const it of n || []) m.set(it.id, it); return [...m.values()].filter(it => !del[it.id]); };
+  const out = { ...O, ...N };
+  const nIds = new Set((N.tasks || []).map(t => t.id));
+  out.tasks = [...(N.tasks || []), ...(O.tasks || []).filter(t => !nIds.has(t.id))];
+  for (const k of ['weights', 'exams', 'consults', 'places']) out[k] = byId(N[k], O[k]);
+  out.checks = {};
+  for (const d of new Set([...Object.keys(O.checks || {}), ...Object.keys(N.checks || {})])) {
+    const c = { ...((O.checks || {})[d] || {}), ...((N.checks || {})[d] || {}) };
+    for (const tid of Object.keys(c)) { const t = del[`chk:${d}:${tid}`]; if (t && t > c[tid]) delete c[tid]; }
+    if (Object.keys(c).length) out.checks[d] = c;
+  }
+  out.journal = {};
+  for (const d of new Set([...Object.keys(O.journal || {}), ...Object.keys(N.journal || {})])) out.journal[d] = { ...((O.journal || {})[d] || {}), ...((N.journal || {})[d] || {}) };
+  const np = Object.fromEntries(Object.entries(N.profile || {}).filter(([, v]) => v));
+  out.profile = { ...(O.profile || {}), ...np };
+  const bl = [...new Set([...((O.meta || {}).backupLog || []), ...((N.meta || {}).backupLog || [])])].sort();
+  const st = [(O.meta || {}).start, (N.meta || {}).start].filter(Boolean).sort()[0];
+  out.meta = { ...(O.meta || {}), ...(N.meta || {}), deleted: del, backupLog: bl, start: st };
+  return out;
+}
+function tomb(id) { S.meta.deleted ||= {}; S.meta.deleted[id] = new Date().toISOString(); }
+
+const Vault = {
+  cfg: null, key: null, running: false, again: 0, timer: null, status: 'off', fails: 0, lockUntil: 0, hiddenAt: 0, locked: false,
+  async init() {
+    if (PREVIEW) return;
+    try { this.cfg = await Store.get('kv', 'vault') || null; } catch (_) { this.cfg = null; }
+    if (this.cfg) { this.key = this.cfg.key || null; GH.cfg = this.cfg; this.status = this.cfg.error ? 'error' : 'ok'; }
+  },
+  async persist() {
+    const c = { ...this.cfg };
+    try { await Store.put('kv', 'vault', c); }
+    catch (e) { delete c.key; c.needsPassword = true; this.cfg.needsPassword = true; try { await Store.put('kv', 'vault', c); } catch (_) {} }
+  },
+  schedule(ms = 3500) { if (!this.cfg || !this.key) return; clearTimeout(this.timer); this.timer = setTimeout(() => this.sync(), ms); },
+  statusText() {
+    if (!this.cfg) return 'Desligado';
+    if (this.running) return 'Sincronizando…';
+    if (!navigator.onLine) return 'Sem internet · salva quando voltar';
+    if (this.cfg.error) return this.cfg.error;
+    return this.cfg.lastSync ? `Sincronizado ${relDay(this.cfg.lastSync)}${dayKey(new Date(this.cfg.lastSync)) === dayKey() ? '' : ' às ' + fmtTime(this.cfg.lastSync)}` : 'Ainda não sincronizou';
+  },
+  paintStatus() { document.querySelectorAll('[data-vault-status]').forEach(el => { el.textContent = this.statusText(); el.classList.toggle('bad', !!(this.cfg && this.cfg.error)); }); },
+  async sync() {
+    if (!this.cfg || !this.key || PREVIEW) return;
+    if (this.running) { this.again++; return; }
+    if (!navigator.onLine) { this.paintStatus(); return; }
+    this.running = true; this.paintStatus();
+    let retry = false; const prevErr = this.cfg.error;
+    try {
+      GH.cfg = this.cfg;
+      const root = await GH.list('');
+      const vf = root.find(x => x.name === 'vault.json');
+      let remoteSha = vf ? vf.sha : null;
+      if (remoteSha && remoteSha !== this.cfg.lastSha) {
+        const v = JSON.parse(TD.decode(await GH.raw('vault.json')));
+        const plain = TD.decode(await decBytes(this.key, unb64(v.data)));
+        const remote = JSON.parse(plain);
+        S = (this.cfg.lastSha || !isVirgin(S)) ? mergeStates(S, remote) : remote;
+        migrate(); await save({ silent: true });
+        this.cfg.lastSha = remoteSha;
+        if (JSON.stringify(S) === plain) this.cfg.lastHash = await sha256hex(plain);
+        render();
+      }
+      const remoteFiles = new Set((await GH.list('files')).map(x => x.name.replace(/\.bin$/, '')));
+      for (const f of fileRefs(S)) {
+        let local = null; try { local = await Store.get('files', f.id); } catch (_) {}
+        if (local && !remoteFiles.has(f.id)) {
+          try { await GH.put(`files/${f.id}.bin`, await encBytes(this.key, new Uint8Array(local.buf)), null, `Anexo: ${f.name}`); } catch (e) { if (e.code !== 'conflict') throw e; }
+          remoteFiles.add(f.id);
+        } else if (!local && remoteFiles.has(f.id)) {
+          const raw = await GH.raw(`files/${f.id}.bin`);
+          if (raw) { const bytes = await decBytes(this.key, raw); await Store.put('files', f.id, { buf: bytes.buffer, type: f.type, name: f.name }); }
+        }
+      }
+      const plain = JSON.stringify(S), h = await sha256hex(plain);
+      if (h !== this.cfg.lastHash) {
+        const now = new Date();
+        const body = { app: APP_ID, kind: 'vault', v: 1, kdf: { name: 'PBKDF2-SHA256', iter: this.cfg.iter, salt: this.cfg.salt }, updatedAt: S.meta.updatedAt || now.toISOString(), device: deviceName(), data: b64(await encBytes(this.key, TE.encode(plain))) };
+        this.cfg.lastSha = await GH.put('vault.json', TE.encode(JSON.stringify(body)), remoteSha, `Atualização ${fmtDate(now)} ${fmtTime(now)} (${deviceName()})`);
+        this.cfg.lastHash = h;
+      }
+      this.cfg.lastSync = new Date().toISOString(); this.cfg.error = null;
+    } catch (e) {
+      if (e.code === 'conflict') retry = true;
+      else if (e.code === 'auth') this.cfg.error = 'A chave do GitHub não funciona mais (venceu ou foi apagada). Troque em Ajustes › Cofre.';
+      else if (e.code === 'notfound') this.cfg.error = 'Repositório do cofre não encontrado. Confira em Ajustes › Cofre.';
+      else if (e.name === 'OperationError') this.cfg.error = 'Não consegui abrir o cofre com esta senha. Reconecte em Ajustes › Cofre.';
+      else this.cfg.error = null;
+    } finally {
+      this.running = false;
+      try { await this.persist(); } catch (_) {}
+      this.paintStatus();
+      if ((retry || this.again) && this.again < 4) { this.again = retry ? this.again + 1 : 0; setTimeout(() => this.sync(), 1200); } else this.again = 0;
+      if (UI.tab === 'ajustes' || (UI.tab === 'hoje' && prevErr !== this.cfg.error)) { const y = window.scrollY; render(); window.scrollTo(0, y); }
+    }
+  },
+  async checkPin(pin) { if (!this.cfg || !this.cfg.pinHash) return true; return (await pinHash(pin, unb64(this.cfg.pinSalt))) === this.cfg.pinHash; },
+  async keyFromPassword(pass) { const k = await deriveKey(pass, unb64(this.cfg.salt), this.cfg.iter); await decBytes(k, unb64(this.cfg.check)); return k; }
+};
+
+/* senha / PIN em tela própria (sem prompt() do navegador) */
+function askSecret(title, msg, { pin = false, confirm = false, okLabel = 'Confirmar' } = {}) {
+  return new Promise(res => {
+    const root = $('#confirm-root');
+    const inp = id => `<input id="${id}" class="input" type="password" ${pin ? 'inputmode="numeric" maxlength="6" autocomplete="off"' : 'autocomplete="new-password"'} aria-label="${esc(title)}">`;
+    root.innerHTML = `<div class="scrim"></div><form class="confirm" id="sec-form" autocomplete="off"><b>${esc(title)}</b>${msg ? `<p class="muted small">${esc(msg)}</p>` : ''}${inp('sec-1')}${confirm ? `<span class="muted small">Repita</span>${inp('sec-2')}` : ''}<p class="err" id="sec-err" hidden></p><div class="row"><button type="button" class="btn" id="sec-no">Cancelar</button><button class="btn primary" id="sec-yes">${esc(okLabel)}</button></div></form>`;
+    root.hidden = false;
+    const done = v => { root.hidden = true; root.innerHTML = ''; res(v); };
+    $('#sec-no').onclick = () => done(null);
+    $('#sec-form').onsubmit = e => { e.preventDefault(); const a = $('#sec-1').value, b = confirm ? $('#sec-2').value : a, er = $('#sec-err');
+      if (pin && !/^\d{4,6}$/.test(a)) { er.textContent = 'O PIN tem de 4 a 6 números.'; er.hidden = false; return; }
+      if (!pin && a.length < 8) { er.textContent = 'Use pelo menos 8 caracteres.'; er.hidden = false; return; }
+      if (a !== b) { er.textContent = 'Não bateu com a repetição.'; er.hidden = false; return; }
+      done(a); };
+    setTimeout(() => { const i = $('#sec-1'); i && i.focus(); }, 30);
+  });
+}
+
+/* tela de bloqueio */
+function showLock(mode) {
+  const root = $('#lock-root'); Vault.locked = true; UI.lockMode = mode || (Vault.key ? 'pin' : 'password');
+  const isPin = UI.lockMode === 'pin';
+  root.innerHTML = `<div class="lock"><form class="lock-box" data-form="unlock" autocomplete="off">
+    <span class="lock-ico">${ico('shield', 30)}</span><h1>Prontuário</h1>
+    <p class="muted">${isPin ? 'Digite seu PIN' : 'Digite a senha do cofre'}</p>
+    <input id="lock-input" class="input lock-input" type="password" ${isPin ? 'inputmode="numeric" maxlength="6" autocomplete="off"' : 'autocomplete="current-password"'} aria-label="${isPin ? 'PIN' : 'Senha do cofre'}">
+    <p class="err" id="lock-err" hidden></p>
+    <button class="btn primary block" type="submit">Entrar</button>
+    ${isPin ? '<button type="button" class="btn ghost" data-act="lock-forgot">Esqueci o PIN</button>' : ''}
+  </form></div>`;
+  root.hidden = false; document.body.classList.add('locked');
+  setTimeout(() => { const i = $('#lock-input'); i && i.focus(); }, 60);
+}
+function hideLock() { const root = $('#lock-root'); root.hidden = true; root.innerHTML = ''; Vault.locked = false; document.body.classList.toggle('locked', !$('#sheet-root').hidden); }
+async function tryUnlock() {
+  const inp = $('#lock-input'), er = $('#lock-err'), v = inp.value;
+  if (Vault.lockUntil > Date.now()) { er.textContent = `Muitas tentativas. Espere ${Math.ceil((Vault.lockUntil - Date.now()) / 1000)} s.`; er.hidden = false; return; }
+  if (UI.lockMode === 'pin') {
+    if (await Vault.checkPin(v)) { Vault.fails = 0; hideLock(); Vault.schedule(300); return; }
+    Vault.fails++; if (Vault.fails >= 5) { Vault.fails = 0; Vault.lockUntil = Date.now() + 30000; }
+    er.textContent = 'PIN errado.'; er.hidden = false; inp.value = ''; inp.focus(); return;
+  }
+  try {
+    const k = await Vault.keyFromPassword(v); Vault.key = k;
+    if (UI.lockMode === 'forgot') {
+      const pin = await askSecret('Novo PIN', '4 a 6 números, pra abrir o app neste aparelho.', { pin: true, confirm: true, okLabel: 'Salvar PIN' });
+      if (pin) { const s = crypto.getRandomValues(new Uint8Array(16)); Vault.cfg.pinSalt = b64(s); Vault.cfg.pinHash = await pinHash(pin, s); await Vault.persist(); }
+    }
+    hideLock(); Vault.schedule(300);
+  } catch (_) { er.textContent = 'Senha errada.'; er.hidden = false; inp.value = ''; inp.focus(); }
+}
+
+/* configurar cofre */
+let VD = null;
+function openVaultSetup() {
+  closeSheet();
+  VD = { step: 1, repo: (Vault.cfg && Vault.cfg.repo) || '', token: '', exists: false, remoteInfo: null, busy: false, err: '' };
+  openSheet('Cofre na nuvem', vaultBody);
+  sheetCleanup = () => { VD = null; };
+}
+function vaultBody() {
+  const d = VD;
+  const err = d.err ? `<p class="err">${esc(d.err)}</p>` : '';
+  if (d.step === 1) return `<form data-form="vault-1" class="stack" autocomplete="off">
+    <p class="muted small" style="margin:0">Seus dados vão pra um repositório <b>privado</b> do seu GitHub, criptografados com uma senha que só você sabe. Funciona no iPhone, no Mac e em qualquer navegador, e guarda o histórico de versões.</p>
+    <label class="field"><span>Repositório privado (usuário/nome)</span><input id="vd-repo" class="input" data-vd="repo" value="${esc(d.repo)}" placeholder="usuario/prontuario-dados" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+    <label class="field"><span>Chave de acesso do GitHub</span><input id="vd-token" class="input" type="password" data-vd="token" value="${esc(d.token)}" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <details class="small muted"><summary>Como criar a chave</summary><ol style="padding-left:18px;margin:8px 0 0;line-height:1.5"><li>github.com › foto › Settings › Developer settings › Personal access tokens › <b>Fine-grained tokens</b> › Generate new token.</li><li>Expiration: 1 ano. Repository access: <b>Only select repositories</b> › só o repositório do cofre.</li><li>Permissions › Repository › <b>Contents: Read and write</b>.</li><li>Generate token, copie e cole aqui. Ela só aparece uma vez.</li></ol></details>
+    ${err}<button class="btn primary block" type="submit" ${d.busy ? 'disabled' : ''}>${d.busy ? 'Testando acesso…' : 'Continuar'}</button></form>`;
+  return `<form data-form="vault-2" class="stack" autocomplete="off">
+    ${d.exists ? `<p style="margin:0">Achei um cofre nesse repositório${d.remoteInfo ? ` (última atualização ${fmtDate(d.remoteInfo.updatedAt)} às ${fmtTime(d.remoteInfo.updatedAt)}, ${esc(d.remoteInfo.device || '')})` : ''}. Digite a senha dele.</p>
+      <label class="field"><span>Senha do cofre</span><input id="vd-pass" class="input" type="password" autocomplete="current-password"></label>`
+    : `<p style="margin:0">Crie a <b>senha do cofre</b>. É ela que tranca seus dados. <b>Se esquecer, ninguém recupera</b>: guarde no app Senhas do iPhone.</p>
+      <label class="field"><span>Senha do cofre (mínimo 8)</span><input id="vd-pass" class="input" type="password" autocomplete="new-password"></label>
+      <label class="field"><span>Repita a senha</span><input id="vd-pass2" class="input" type="password" autocomplete="new-password"></label>`}
+    <div class="grid2"><label class="field"><span>PIN pra abrir (4–6 números)</span><input id="vd-pin" class="input" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></label>
+      <label class="field"><span>Repita o PIN</span><input id="vd-pin2" class="input" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></label></div>
+    <p class="muted small" style="margin:0">O PIN vale só neste aparelho. Esqueceu o PIN? Entra com a senha do cofre.</p>
+    ${err}<button class="btn primary block" type="submit" ${d.busy ? 'disabled' : ''}>${d.busy ? 'Trabalhando… (leva alguns segundos)' : d.exists ? 'Conectar' : 'Criar cofre'}</button></form>`;
+}
+async function vaultStep1() {
+  const d = VD; d.repo = $('#vd-repo').value.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/$/, ''); d.token = $('#vd-token').value.trim();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(d.repo)) { d.err = 'Escreva no formato usuario/repositorio.'; return refreshSheet(); }
+  if (d.token.length < 20) { d.err = 'Cole a chave de acesso do GitHub.'; return refreshSheet(); }
+  d.busy = true; d.err = ''; refreshSheet();
+  try {
+    GH.cfg = { repo: d.repo, token: d.token };
+    const info = await GH.repoInfo();
+    if (!info.private) { d.busy = false; d.err = 'Esse repositório é PÚBLICO. Por segurança o cofre só funciona em repositório privado.'; return refreshSheet(); }
+    const root = await GH.list('');
+    d.exists = root.some(x => x.name === 'vault.json');
+    if (d.exists) { const v = JSON.parse(TD.decode(await GH.raw('vault.json'))); d.remoteInfo = { updatedAt: v.updatedAt, device: v.device }; d.vault = v; }
+    d.step = 2; d.busy = false; refreshSheet();
+  } catch (e) {
+    d.busy = false;
+    d.err = e.code === 'auth' ? 'A chave não foi aceita. Confira se copiou inteira e se ela tem acesso a esse repositório.' : e.code === 'notfound' ? 'Não achei esse repositório com essa chave. Confira o nome e se a chave tem acesso a ele.' : 'Não consegui falar com o GitHub. Confira a internet e tente de novo.';
+    refreshSheet();
+  }
+}
+async function vaultStep2() {
+  const d = VD, pass = $('#vd-pass').value, pass2 = d.exists ? pass : $('#vd-pass2').value, pin = $('#vd-pin').value, pin2 = $('#vd-pin2').value;
+  if (pass.length < 8) { d.err = 'A senha precisa de pelo menos 8 caracteres.'; return refreshSheet(); }
+  if (pass !== pass2) { d.err = 'As duas senhas não batem.'; return refreshSheet(); }
+  if (!/^\d{4,6}$/.test(pin) || pin !== pin2) { d.err = 'PIN: 4 a 6 números, igual nos dois campos.'; return refreshSheet(); }
+  d.busy = true; d.err = ''; refreshSheet();
+  try {
+    let salt, iter, key, remoteState = null;
+    if (d.exists) {
+      salt = unb64(d.vault.kdf.salt); iter = d.vault.kdf.iter;
+      key = await deriveKey(pass, salt, iter);
+      try { remoteState = JSON.parse(TD.decode(await decBytes(key, unb64(d.vault.data)))); }
+      catch (_) { d.busy = false; d.err = 'Senha errada pra esse cofre.'; return refreshSheet(); }
+    } else { salt = crypto.getRandomValues(new Uint8Array(16)); iter = KDF_ITER; key = await deriveKey(pass, salt, iter); }
+    const pinSalt = crypto.getRandomValues(new Uint8Array(16));
+    Vault.cfg = { repo: d.repo, token: d.token, salt: b64(salt), iter, key, pinSalt: b64(pinSalt), pinHash: await pinHash(pin, pinSalt), check: b64(await encBytes(key, TE.encode('prontuario-ok'))), lastSha: null, lastHash: null, lastSync: null, error: null, connectedAt: new Date().toISOString() };
+    Vault.key = key; GH.cfg = Vault.cfg;
+    if (remoteState) { S = isVirgin(S) ? remoteState : mergeStates(S, remoteState); migrate(); await save({ silent: true }); }
+    await Vault.persist();
+    closeSheet(); render(); toast('Cofre conectado. Sincronizando…');
+    await Vault.sync();
+    toast(Vault.cfg.error ? esc(Vault.cfg.error) : 'Tudo salvo no cofre, criptografado');
+  } catch (e) { d.busy = false; d.err = 'Deu erro ao configurar: ' + (e.message || e); refreshSheet(); }
+}
+async function openVersions() {
+  closeSheet();
+  openSheet('Versões anteriores', () => `<div id="ver-list" class="stack"><p class="muted">Buscando no GitHub…</p></div>`);
+  try {
+    const cs = await GH.commits('vault.json'); const box = $('#ver-list'); if (!box) return;
+    box.innerHTML = cs.length ? `<p class="muted small" style="margin:0">Cada linha é uma versão salva. Voltar uma versão não apaga a atual: ela continua aqui.</p><ul class="list">${cs.map((c, i) => `<li><button class="row-btn" data-act="ver-restore" data-sha="${esc(c.sha)}" ${i === 0 ? 'disabled' : ''}><div class="rb-main"><b>${fmtDate(c.commit.author.date)} às ${fmtTime(c.commit.author.date)}${i === 0 ? ' · atual' : ''}</b><span class="muted small">${esc(c.commit.message)}</span></div>${i ? ico('refresh', 16) : ''}</button></li>`).join('')}</ul>` : '<p class="muted">Nenhuma versão ainda.</p>';
+  } catch (e) { const box = $('#ver-list'); if (box) box.innerHTML = '<p class="err">Não consegui buscar as versões agora.</p>'; }
+}
+async function restoreVersion(sha) {
+  if (!await askConfirm('Voltar os dados pra essa versão? A versão de agora continua salva no histórico.', 'Voltar pra essa versão', false)) return;
+  try {
+    const v = JSON.parse(TD.decode(await GH.raw('vault.json', sha)));
+    const st = JSON.parse(TD.decode(await decBytes(Vault.key, unb64(v.data))));
+    S = st; migrate(); S.meta.updatedAt = new Date().toISOString(); await save({ silent: true });
+    closeSheet(); render(); await Vault.sync(); toast('Versão restaurada');
+  } catch (e) { toast('Não consegui restaurar essa versão.'); }
+}
+async function disconnectVault() {
+  if (!await askConfirm('Desconectar o cofre deste aparelho? Os dados continuam aqui e no GitHub; só para de sincronizar e tira o PIN.', 'Desconectar')) return;
+  try { await Store.del('kv', 'vault'); } catch (_) {}
+  Vault.cfg = null; Vault.key = null; GH.cfg = null; render(); toast('Cofre desconectado deste aparelho');
+}
+async function changePin() {
+  const pin = await askSecret('Novo PIN', '4 a 6 números, pra abrir o app neste aparelho.', { pin: true, confirm: true, okLabel: 'Salvar PIN' });
+  if (!pin) return; const s = crypto.getRandomValues(new Uint8Array(16)); Vault.cfg.pinSalt = b64(s); Vault.cfg.pinHash = await pinHash(pin, s); await Vault.persist(); toast('PIN trocado');
+}
+function vaultCard() {
+  if (PREVIEW) return `<section class="card stack"><b>Cofre na nuvem</b><p class="muted small" style="margin:0">Na prévia o cofre fica desligado. No app publicado, os dados vão criptografados pro seu GitHub privado.</p></section>`;
+  if (!Vault.cfg) return `<section class="card stack"><div class="row between"><b>Cofre na nuvem</b><span class="chip bad">Desligado</span></div>
+    <p style="margin:0">Hoje seus dados estão <b>só neste aparelho</b>. Ligue o cofre: tudo vai criptografado pro seu GitHub privado, sincroniza entre iPhone e Mac e guarda o histórico.</p>
+    <button class="btn primary block" data-act="vault-setup">${ico('shield', 18)} Ligar o cofre</button></section>`;
+  return `<section class="card stack"><div class="row between"><b>Cofre na nuvem</b><span class="chip ${Vault.cfg.error ? 'bad' : 'ok'}">${Vault.cfg.error ? 'Atenção' : 'Ligado'}</span></div>
+    <p class="small" style="margin:0"><span data-vault-status>${esc(Vault.statusText())}</span><br><span class="muted">Repositório ${esc(Vault.cfg.repo)} · criptografado (AES-256)</span></p>
+    <div class="row"><button class="btn primary" style="flex:1" data-act="vault-sync">${ico('refresh', 17)} Sincronizar</button><button class="btn" style="flex:1" data-act="vault-versions">Versões</button></div>
+    <div class="row"><button class="btn" style="flex:1" data-act="vault-pin">Trocar PIN</button><button class="btn" style="flex:1" data-act="vault-setup">Trocar chave</button></div>
+    <button class="btn ghost" style="color:var(--bad)" data-act="vault-off">Desconectar deste aparelho</button></section>`;
 }
 
 /* ---------- render ---------- */
@@ -1403,7 +1747,8 @@ const actions = {
   'toggle': async el => {
     const id = el.dataset.id, k = UI.day, before = computeGame(); S.checks[k] ||= {};
     const was = !!S.checks[k][id];
-    if (was) delete S.checks[k][id]; else S.checks[k][id] = new Date().toISOString();
+    S.meta.deleted ||= {};
+    if (was) { delete S.checks[k][id]; S.meta.deleted[`chk:${k}:${id}`] = new Date().toISOString(); } else { S.checks[k][id] = new Date().toISOString(); delete S.meta.deleted[`chk:${k}:${id}`]; }
     if (!Object.keys(S.checks[k]).length) delete S.checks[k];
     await save(); render();
     if (!was) { xpToast(before, dayComplete(k) ? 'Dia completo!' : 'Feito'); if (navigator.vibrate) try { navigator.vibrate(8); } catch (_) {} }
@@ -1432,7 +1777,7 @@ const actions = {
   'weight-open': el => openWeight(el.dataset.id),
   'weight-del': async el => {
     if (!await askConfirm('Excluir este registro de peso?', 'Excluir')) return;
-    S.weights = S.weights.filter(w => w.id !== el.dataset.id); await save(); closeSheet(); render(); toast('Registro excluído');
+    tomb(el.dataset.id); S.weights = S.weights.filter(w => w.id !== el.dataset.id); await save(); closeSheet(); render(); toast('Registro excluído');
   },
   'place-from-weight': el => { const w = S.weights.find(x => x.id === el.dataset.id); if (w && w.loc) openPlaceForm(null, w.loc); },
   'exam-new': () => openExamForm(null),
@@ -1442,7 +1787,7 @@ const actions = {
     const e = S.exams.find(x => x.id === el.dataset.id); if (!e) return;
     if (!await askConfirm('Excluir este exame e os arquivos anexados?', 'Excluir')) return;
     for (const f of e.files || []) { try { await Store.del('files', f.id); } catch (_) {} }
-    S.exams = S.exams.filter(x => x.id !== e.id); await save(); closeSheet(); render(); toast('Exame excluído');
+    tomb(e.id); S.exams = S.exams.filter(x => x.id !== e.id); await save(); closeSheet(); render(); toast('Exame excluído');
   },
   'consult-new': () => openConsultForm(null),
   'consult-open': el => openConsult(el.dataset.id),
@@ -1451,7 +1796,7 @@ const actions = {
     const c = S.consults.find(x => x.id === el.dataset.id); if (!c) return;
     if (!await askConfirm('Excluir esta consulta e os anexos?', 'Excluir')) return;
     for (const f of c.files || []) { try { await Store.del('files', f.id); } catch (_) {} }
-    S.consults = S.consults.filter(x => x.id !== c.id); await save(); closeSheet(); render(); toast('Consulta excluída');
+    tomb(c.id); S.consults = S.consults.filter(x => x.id !== c.id); await save(); closeSheet(); render(); toast('Consulta excluída');
   },
   'fd-here': async el => {
     el.disabled = true; const t = startLocating({});
@@ -1476,9 +1821,17 @@ const actions = {
     const p = S.places.find(x => x.id === el.dataset.id); if (!p) return;
     if (!await askConfirm(`Excluir o local "${p.name}"? Os registros antigos continuam com esse nome.`, 'Excluir')) return;
     for (const w of S.weights) if (w.placeId === p.id) { w.placeId = null; w.label = p.name; w.kind = p.kind; }
-    S.places = S.places.filter(x => x.id !== p.id); await save(); closeSheet(); render();
+    tomb(p.id); S.places = S.places.filter(x => x.id !== p.id); await save(); closeSheet(); render();
   },
   'export': () => exportBackup(),
+  'vault-setup': () => openVaultSetup(),
+  'vault-sync': async () => { await Vault.sync(); toast(Vault.cfg && Vault.cfg.error ? esc(Vault.cfg.error) : 'Cofre sincronizado'); },
+  'vault-versions': () => openVersions(),
+  'ver-restore': el => restoreVersion(el.dataset.sha),
+  'vault-pin': () => changePin(),
+  'vault-off': () => disconnectVault(),
+  'lock-forgot': () => showLock('forgot'),
+  'go-vault': () => { UI.tab = 'ajustes'; render(); window.scrollTo(0, 0); },
   'export-csv': () => exportCsv(),
   'demo-load': () => loadDemo(),
   'demo-reset': async () => {
@@ -1516,6 +1869,9 @@ document.addEventListener('click', e => {
 });
 const forms = {
   'weigh': () => saveWeigh(),
+  'unlock': () => tryUnlock(),
+  'vault-1': () => vaultStep1(),
+  'vault-2': () => vaultStep2(),
   'fd': () => saveForm(),
   'place': () => savePlace(),
   'task-add': async () => { const i = $('#tk-new'); const n = i.value.trim(); if (!n) return; S.tasks.push({ id: uid(), name: n, active: true }); const act = activeTasks(); S.tasks = [...act, ...S.tasks.filter(t => !t.active)]; await save(); refreshSheet(); render(); const ni = $('#tk-new'); ni && ni.focus(); },
@@ -1555,14 +1911,22 @@ document.addEventListener('change', async e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('#viewer-root').hidden) actions['viewer-close'](); else closeSheet(); } });
 if (window.visualViewport) { visualViewport.addEventListener('resize', syncViewport); visualViewport.addEventListener('scroll', syncViewport); }
-window.addEventListener('online', () => resolveMissingLabels());
-document.addEventListener('visibilitychange', () => { if (!document.hidden && UI.tab === 'hoje' && UI.day !== dayKey() && !sheetRender) { UI.day = dayKey(); render(); } });
+window.addEventListener('online', () => { resolveMissingLabels(); Vault.schedule(500); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { Vault.hiddenAt = Date.now(); return; }
+  if (Vault.cfg && !Vault.locked && Vault.hiddenAt && Date.now() - Vault.hiddenAt > 180000) showLock(Vault.key ? 'pin' : 'password');
+  if (UI.tab === 'hoje' && UI.day !== dayKey() && !sheetRender) { UI.day = dayKey(); render(); }
+  if (Vault.cfg && Date.now() - Date.parse(Vault.cfg.lastSync || 0) > 60000) Vault.schedule(600);
+});
 
 /* ---------- boot ---------- */
 (async function boot() {
   syncViewport();
   await load();
+  await Vault.init();
+  if (Vault.cfg && (Vault.cfg.pinHash || !Vault.key)) showLock(Vault.key ? 'pin' : 'password');
   render();
+  if (Vault.key) Vault.schedule(1200);
   try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (_) {}
   if (!PREVIEW && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
