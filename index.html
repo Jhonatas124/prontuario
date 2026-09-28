@@ -393,7 +393,7 @@ details summary{cursor:pointer;color:var(--accent);font-weight:650}
 <script>
 'use strict';
 const APP_ID = 'prontuario-de-bolso';
-const APP_VERSION = '3.5';
+const APP_VERSION = '3.6';
 const PREVIEW = !!window.PREVIEW_MODE;
 
 /* ---------- utils ---------- */
@@ -633,6 +633,7 @@ function placeOf(e) {
   if (e.address) return { name: e.address, kind: 'outro', sub: '' };
   if (e.loc) return { name: `${e.loc.lat.toFixed(5)}, ${e.loc.lng.toFixed(5)}`, kind: 'outro', sub: '' };
   if (e.source === 'anotação') return { name: 'Anotado à mão', kind: 'note', sub: 'sem hora e sem local' };
+  if (e.source === 'saude-iphone') return { name: 'App Saúde do iPhone', kind: 'note', sub: 'só o mês' };
   return { name: 'Sem localização', kind: 'semloc', sub: e.locError || '' };
 }
 const placeChip = e => { const p = placeOf(e); return `<span class="chip k-${p.kind}">${ico(p.kind, 14, 2)}<span>${esc(p.name)}</span></span>`; };
@@ -1043,7 +1044,8 @@ async function saveWeigh() {
   closeSheet(); render(); xpToast(before, `Peso salvo: ${fmtKg(entry.kg)} kg`);
 }
 async function finishLoc(id, w) { const e = S.weights.find(x => x.id === id); if (!e) return; applyLoc(e, w); await save(); render(); }
-const whenTxt = w => w.timeUnknown ? `${fmtDate(w.ts)} (sem hora)` : `${fmtDate(w.ts)} às ${fmtTime(w.ts)}`;
+const fmtMonth = ts => new Date(ts).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+const whenTxt = w => w.monthOnly ? `${fmtMonth(w.ts)}${w.monthAvg ? ' (média do mês)' : ' (dia não informado)'}` : w.timeUnknown ? `${fmtDate(w.ts)} (sem hora)` : `${fmtDate(w.ts)} às ${fmtTime(w.ts)}`;
 function goalTxt(last) {
   const g = S.settings.weightGoal;
   if (g == null) return `<button class="linkish" style="font-size:14px" data-act="customize">${ico('target', 15)} Definir meta de peso</button>`;
@@ -1079,7 +1081,7 @@ function viewPeso() {
   <h2 class="sec">Histórico</h2>
   <ul class="list">${ws.map((w, i) => { const pv = ws[i + 1]; const d = pv ? Math.round((w.kg - pv.kg) * 10) / 10 : null;
     return `<li><button class="row-btn" data-act="weight-open" data-id="${w.id}"><div class="w-row">
-      <span class="w-when">${fmtDate(w.ts)}${w.timeUnknown ? '' : ` <span class="muted" style="font-weight:500">· ${fmtTime(w.ts)}</span>`}</span><span class="w-kg">${fmtKg(w.kg)} kg</span>
+      <span class="w-when">${w.monthOnly ? fmtMonth(w.ts) + (w.monthAvg ? ' <span class="muted" style="font-weight:500">· média</span>' : '') : fmtDate(w.ts)}${w.timeUnknown ? '' : ` <span class="muted" style="font-weight:500">· ${fmtTime(w.ts)}</span>`}</span><span class="w-kg">${fmtKg(w.kg)} kg</span>
       <span>${placeChip(w)}</span><span class="w-d ${d == null ? 'muted' : d > 0 ? 'delta up' : d < 0 ? 'delta down' : 'delta eq'}">${d == null ? '' : (d > 0 ? '+' : d < 0 ? '−' : '±') + fmtKg(Math.abs(d))}</span>
     </div></button></li>`; }).join('')}</ul>` : ''}`;
 }
